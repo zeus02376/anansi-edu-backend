@@ -8,27 +8,36 @@ import {
   IsUrl,
   Min,
 } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class EnseignantDto {
+  @ApiProperty({ format: 'uuid' })
   @IsUUID()
   userId: string;
+  @ApiProperty({ format: 'uuid' })
   @IsUUID()
   tenantId: string;
+  @ApiProperty({ enum: TypeEnseignant })
   @IsEnum(TypeEnseignant)
   type: TypeEnseignant;
+  @ApiPropertyOptional({ example: 'Informatique' })
   @IsOptional()
   @IsString()
   specialite?: string;
+  @ApiPropertyOptional({ format: 'url' })
   @IsOptional()
   @IsUrl()
   cvUrl?: string;
 }
 
 export class AffectationDto {
+  @ApiProperty({ format: 'uuid' })
   @IsUUID()
   matiereId: string;
+  @ApiProperty({ format: 'uuid' })
   @IsUUID()
   anneeAcademiqueId: string;
+  @ApiPropertyOptional({ minimum: 0, default: 0 })
   @IsOptional()
   @IsInt()
   @Min(0)
