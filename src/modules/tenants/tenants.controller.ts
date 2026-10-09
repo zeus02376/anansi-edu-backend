@@ -16,8 +16,6 @@ import { TenantDto } from './dto/tenant.dto';
 import { TenantsService } from './tenants.service';
 
 @Controller('tenants')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN)
 export class TenantsController {
   constructor(private readonly service: TenantsService) {}
 
@@ -25,19 +23,31 @@ export class TenantsController {
   create(@Body() dto: TenantDto) {
     return this.service.create(dto);
   }
+
   @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   findAll() {
     return this.service.findAll();
   }
+
   @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
   }
+
   @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   update(@Param('id') id: string, @Body() dto: TenantDto) {
     return this.service.update(id, dto);
   }
+
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
   remove(@Param('id') id: string) {
     return this.service.remove(id);
   }

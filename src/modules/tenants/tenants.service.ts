@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TenantDto } from './dto/tenant.dto';
 
@@ -6,8 +7,33 @@ import { TenantDto } from './dto/tenant.dto';
 export class TenantsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(data: TenantDto) {
-    return this.prisma.tenant.create({ data });
+  async create(data: TenantDto) {
+    try {
+      return await this.prisma.$transaction(
+        async (tx) => {
+          const existingTenant = await tx.tenant.findFirst({
+            select: { id: true },
+          });
+          if (existingTenant) {
+            throw new ConflictException(
+              'Le tenant initial a déjà été créé; authentifiez-vous comme ADMIN',
+            );
+          }
+          return tx.tenant.create({ data });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === 'P2002' || error.code === 'P2034')
+      ) {
+        throw new ConflictException(
+          'Le tenant initial a déjà été créé; authentifiez-vous comme ADMIN',
+        );
+      }
+      throw error;
+    }
   }
 
   findAll() {

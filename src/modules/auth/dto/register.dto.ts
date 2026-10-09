@@ -1,10 +1,12 @@
 import {
+  IsEnum,
   IsEmail,
   IsOptional,
   IsString,
   IsUUID,
   MinLength,
 } from 'class-validator';
+import { Role } from '@prisma/client';
 
 export class RegisterDto {
   @IsUUID()
@@ -26,4 +28,8 @@ export class RegisterDto {
   @IsString()
   @MinLength(8)
   motDePasse: string;
+
+  @IsOptional()
+  @IsEnum(Role)
+  role?: Role;
 }
