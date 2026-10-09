@@ -1,0 +1,276 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id                String             @id @default(uuid())
+  nom               String
+  slug              String             @unique
+  pays              String
+  ville             String
+  createdAt         DateTime           @default(now())
+  users             User[]
+  ecoles            Ecole[]
+  anneesAcademiques AnneeAcademique[]
+  candidatures      Candidature[]
+  etudiants         Etudiant[]
+  enseignants       Enseignant[]
+}
+
+model User {
+  id             String   @id @default(uuid())
+  tenantId       String
+  nom            String
+  prenom         String
+  email          String   @unique
+  telephone      String?
+  motDePasseHash String
+  role           Role
+  statut         Statut   @default(ACTIF)
+  createdAt      DateTime @default(now())
+
+  tenant      Tenant                  @relation(fields: [tenantId], references: [id])
+  etudiant    Etudiant?
+  enseignant  Enseignant?
+  historiques HistoriqueCandidature[]
+}
+
+enum Role {
+  ADMIN
+  SCOLARITE
+  ENSEIGNANT
+  ETUDIANT
+}
+
+enum Statut {
+  ACTIF
+  INACTIF
+  SUSPENDU
+}
+
+model Ecole {
+  id          String  @id @default(uuid())
+  tenantId    String
+  nom         String
+  code        String
+  description String?
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  filieres Filiere[]
+}
+
+model Filiere {
+  id          String @id @default(uuid())
+  ecoleId     String
+  nom         String
+  code        String
+  cycle       Cycle
+  regime      Regime
+  langue      Langue
+  dureeAnnees Int
+  tutelle     String
+
+  ecole        Ecole         @relation(fields: [ecoleId], references: [id])
+  niveaux      Niveau[]
+  candidatures Candidature[]
+}
+
+enum Cycle {
+  BTS
+  HND
+  LICENCE
+  MASTER
+  INGENIEUR
+}
+
+enum Regime {
+  LMD
+  ANGLO_SAXON
+  NATIONAL
+}
+
+enum Langue {
+  FR
+  EN
+  FR_EN
+}
+
+model Niveau {
+  id        String @id @default(uuid())
+  filiereId String
+  nom       String
+  code      String
+  ordre     Int
+
+  filiere      Filiere       @relation(fields: [filiereId], references: [id])
+  matieres     Matiere[]
+  inscriptions Inscription[]
+}
+
+model AnneeAcademique {
+  id        String   @id @default(uuid())
+  tenantId  String
+  libelle   String
+  dateDebut DateTime
+  dateFin   DateTime
+  active    Boolean  @default(false)
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  matieres     Matiere[]
+  inscriptions Inscription[]
+  candidatures Candidature[]
+  affectations Affectation[]
+}
+
+model Matiere {
+  id                String  @id @default(uuid())
+  niveauId          String
+  anneeAcademiqueId String
+  nom               String
+  code              String
+  credits           Int     @default(0)
+  heuresCm          Int     @default(0)
+  heuresTd          Int     @default(0)
+  heuresTp          Int     @default(0)
+  coefficient       Float   @default(1)
+
+  niveau          Niveau          @relation(fields: [niveauId], references: [id])
+  anneeAcademique AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
+  affectations    Affectation[]
+}
+
+model Enseignant {
+  id         String         @id @default(uuid())
+  userId     String         @unique
+  tenantId   String
+  type       TypeEnseignant
+  specialite String?
+  cvUrl      String?
+
+  user         User          @relation(fields: [userId], references: [id])
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  affectations Affectation[]
+}
+
+enum TypeEnseignant {
+  PERMANENT
+  VACATAIRE
+}
+
+model Affectation {
+  id                String @id @default(uuid())
+  enseignantId      String
+  matiereId         String
+  anneeAcademiqueId String
+  heuresPrevues     Int    @default(0)
+  heuresEffectuees  Int    @default(0)
+
+  enseignant      Enseignant      @relation(fields: [enseignantId], references: [id])
+  matiere         Matiere         @relation(fields: [matiereId], references: [id])
+  anneeAcademique AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
+}
+
+model Etudiant {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  tenantId      String
+  matricule     String   @unique
+  dateNaissance DateTime
+  lieuNaissance String
+  nationalite   String
+  photoUrl      String?
+
+  user         User          @relation(fields: [userId], references: [id])
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  inscriptions Inscription[]
+}
+
+model Inscription {
+  id                String            @id @default(uuid())
+  etudiantId        String
+  niveauId          String
+  anneeAcademiqueId String
+  statut            StatutInscription @default(EN_ATTENTE)
+  dateInscription   DateTime          @default(now())
+  fraisPayes        Boolean           @default(false)
+  createdBy         String
+
+  etudiant        Etudiant        @relation(fields: [etudiantId], references: [id])
+  niveau          Niveau          @relation(fields: [niveauId], references: [id])
+  anneeAcademique AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
+}
+
+enum StatutInscription {
+  EN_ATTENTE
+  VALIDE
+  REJETE
+  SUSPENDU
+}
+
+model Candidature {
+  id                String            @id @default(uuid())
+  tenantId          String
+  nom               String
+  prenom            String
+  email             String
+  telephone         String?
+  dateNaissance     DateTime
+  lieuNaissance     String
+  nationalite       String
+  filiereId         String
+  anneeAcademiqueId String
+  statut            StatutCandidature @default(SOUMIS)
+  numeroDossier     String            @unique
+  createdAt         DateTime          @default(now())
+
+  tenant          Tenant                  @relation(fields: [tenantId], references: [id])
+  filiere         Filiere                 @relation(fields: [filiereId], references: [id])
+  anneeAcademique AnneeAcademique         @relation(fields: [anneeAcademiqueId], references: [id])
+  documents       DocumentCandidature[]
+  historiques     HistoriqueCandidature[]
+}
+
+enum StatutCandidature {
+  SOUMIS
+  INCOMPLET
+  EN_EXAMEN
+  ACCEPTE
+  REJETE
+}
+
+model DocumentCandidature {
+  id            String       @id @default(uuid())
+  candidatureId String
+  typeDocument  TypeDocument
+  nomFichier    String
+  urlFichier    String
+  valide        Boolean      @default(false)
+  commentaire   String?
+
+  candidature Candidature @relation(fields: [candidatureId], references: [id])
+}
+
+enum TypeDocument {
+  CNI
+  DIPLOME
+  RELEVE_NOTES
+  PHOTO
+  AUTRE
+}
+
+model HistoriqueCandidature {
+  id            String   @id @default(uuid())
+  candidatureId String
+  userId        String
+  action        String
+  commentaire   String?
+  createdAt     DateTime @default(now())
+
+  candidature Candidature @relation(fields: [candidatureId], references: [id])
+  user        User        @relation(fields: [userId], references: [id])
+}
