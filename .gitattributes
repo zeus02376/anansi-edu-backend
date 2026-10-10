@@ -1,0 +1,5 @@
+# Force LF partout (Prettier exige "lf"), quel que soit core.autocrlf
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
