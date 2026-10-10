@@ -10,7 +10,6 @@ import {
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import {
-  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
