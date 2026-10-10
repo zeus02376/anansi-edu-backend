@@ -47,8 +47,9 @@ export class CandidaturesService {
     });
   }
 
-  findAll() {
+  findAll(tenantId: string) {
     return this.prisma.candidature.findMany({
+      where: { tenantId },
       include: { filiere: true, anneeAcademique: true, historiques: true },
       orderBy: { createdAt: 'desc' },
     });

@@ -14,8 +14,9 @@ export class AnneesAcademiquesService {
       },
     });
   }
-  findAll() {
+  findAll(tenantId: string) {
     return this.prisma.anneeAcademique.findMany({
+      where: { tenantId },
       orderBy: { dateDebut: 'desc' },
     });
   }

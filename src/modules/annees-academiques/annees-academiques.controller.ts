@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
@@ -47,8 +48,8 @@ export class AnneesAcademiquesController {
   @ApiOkResponse({ description: 'Liste des années académiques' })
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
-  findAll() {
-    return this.service.findAll();
+  findAll(@Req() request: { user: { tenantId: string } }) {
+    return this.service.findAll(request.user.tenantId);
   }
   @Get(':id')
   @ApiOperation({ summary: 'Consulter une année académique' })

@@ -51,8 +51,8 @@ export class CandidaturesController {
   @ApiOkResponse({ description: 'Liste des candidatures' })
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
-  findAll() {
-    return this.service.findAll();
+  findAll(@Req() request: { user: { tenantId: string } }) {
+    return this.service.findAll(request.user.tenantId);
   }
 
   @Get(':id')

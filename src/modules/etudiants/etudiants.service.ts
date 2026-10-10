@@ -55,6 +55,7 @@ export class EtudiantsService {
           dateNaissance: candidature.dateNaissance,
           lieuNaissance: candidature.lieuNaissance,
           nationalite: candidature.nationalite,
+          candidatureId: candidature.id,
         },
         include: {
           user: {

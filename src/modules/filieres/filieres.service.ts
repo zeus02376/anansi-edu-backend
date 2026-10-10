@@ -8,8 +8,11 @@ export class FilieresService {
   create(data: FiliereDto) {
     return this.prisma.filiere.create({ data });
   }
-  findAll() {
-    return this.prisma.filiere.findMany({ orderBy: { nom: 'asc' } });
+  findAll(tenantId: string) {
+    return this.prisma.filiere.findMany({
+      where: { ecole: { tenantId } },
+      orderBy: { nom: 'asc' },
+    });
   }
   findOne(id: string) {
     return this.prisma.filiere.findUniqueOrThrow({ where: { id } });

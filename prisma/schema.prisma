@@ -184,9 +184,11 @@ model Etudiant {
   lieuNaissance String
   nationalite   String
   photoUrl      String?
+  candidatureId String?  @unique
 
   user         User          @relation(fields: [userId], references: [id])
   tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  candidature  Candidature?  @relation(fields: [candidatureId], references: [id])
   inscriptions Inscription[]
 }
 
@@ -233,6 +235,7 @@ model Candidature {
   anneeAcademique AnneeAcademique         @relation(fields: [anneeAcademiqueId], references: [id])
   documents       DocumentCandidature[]
   historiques     HistoriqueCandidature[]
+  etudiant        Etudiant?
 }
 
 enum StatutCandidature {
