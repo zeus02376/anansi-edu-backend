@@ -3,10 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { StatutCandidature, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { formatMatricule } from '../../common/utils/matricule.util';
+import { generateTemporaryPassword } from '../../common/utils/password.util';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEtudiantDto } from './dto/create-etudiant.dto';
 
@@ -30,9 +30,11 @@ export class EtudiantsService {
       );
     }
 
-    const passwordHash = await bcrypt.hash(randomUUID(), 12);
+    // Renvoyé une seule fois à l'appelant ; seul le hash est stocké
+    const motDePasseTemporaire = generateTemporaryPassword();
+    const passwordHash = await bcrypt.hash(motDePasseTemporaire, 12);
     const year = new Date().getFullYear();
-    return this.prisma.$transaction(async (tx) => {
+    const etudiant = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           tenantId: candidature.tenantId,
@@ -42,6 +44,7 @@ export class EtudiantsService {
           telephone: candidature.telephone,
           motDePasseHash: passwordHash,
           role: Role.ETUDIANT,
+          doitChangerMotDePasse: true,
         },
       });
       const existingCount = await tx.etudiant.count({
@@ -70,6 +73,7 @@ export class EtudiantsService {
         },
       });
     });
+    return { ...etudiant, motDePasseTemporaire };
   }
 
   findAll() {

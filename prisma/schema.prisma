@@ -23,16 +23,18 @@ model Tenant {
 }
 
 model User {
-  id             String   @id @default(uuid())
-  tenantId       String
-  nom            String
-  prenom         String
-  email          String   @unique
-  telephone      String?
-  motDePasseHash String
-  role           Role
-  statut         Statut   @default(ACTIF)
-  createdAt      DateTime @default(now())
+  id                    String   @id @default(uuid())
+  tenantId              String
+  nom                   String
+  prenom                String
+  email                 String   @unique
+  telephone             String?
+  motDePasseHash        String
+  role                  Role
+  statut                Statut   @default(ACTIF)
+  // true tant que l'utilisateur garde un mot de passe temporaire
+  doitChangerMotDePasse Boolean  @default(false)
+  createdAt             DateTime @default(now())
 
   tenant      Tenant                  @relation(fields: [tenantId], references: [id])
   etudiant    Etudiant?

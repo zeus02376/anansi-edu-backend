@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   UnauthorizedException,
   ConflictException,
@@ -7,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -80,7 +82,34 @@ export class AuthService {
         prenom: user.prenom,
         email: user.email,
         role: user.role,
+        doitChangerMotDePasse: user.doitChangerMotDePasse,
       },
     };
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('Compte introuvable');
+    }
+    // 400 et non 401 : l'utilisateur est authentifié, seul le champ est faux
+    // (un 401 déconnecterait le front via l'intercepteur axios)
+    if (!(await bcrypt.compare(dto.motDePasseActuel, user.motDePasseHash))) {
+      throw new BadRequestException('Mot de passe actuel incorrect');
+    }
+    if (dto.nouveauMotDePasse === dto.motDePasseActuel) {
+      throw new BadRequestException(
+        'Le nouveau mot de passe doit être différent de l’actuel',
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        motDePasseHash: await bcrypt.hash(dto.nouveauMotDePasse, 12),
+        doitChangerMotDePasse: false,
+      },
+    });
+    return { message: 'Mot de passe modifié' };
   }
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import {
   ApiBadRequestResponse,
@@ -6,6 +6,7 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
+  ApiOkResponse,
   ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -14,6 +15,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { AuthService } from './auth.service';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -48,5 +50,22 @@ export class AuthController {
     @Body() dto: CreateStaffDto,
   ) {
     return this.authService.createStaff(request.user.tenantId, dto);
+  }
+
+  @Patch('change-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Changer son propre mot de passe' })
+  @ApiOkResponse({ description: 'Mot de passe modifié' })
+  @ApiBadRequestResponse({
+    description:
+      'Mot de passe actuel incorrect, ou nouveau mot de passe invalide/identique',
+  })
+  @ApiUnauthorizedResponse({ description: 'Authentification requise' })
+  changePassword(
+    @Req() request: { user: { id: string } },
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(request.user.id, dto);
   }
 }
