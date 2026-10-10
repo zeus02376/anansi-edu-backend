@@ -30,10 +30,15 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
+  /**
+   * Bootstrap uniquement : crée le compte ADMIN initial tant qu'aucun
+   * utilisateur n'existe. Les autres comptes passent par create-staff
+   * (ADMIN) ou par la création d'étudiant depuis une candidature.
+   */
   async register(dto: RegisterDto) {
-    if (dto.role && dto.role !== Role.ADMIN && dto.role !== Role.ETUDIANT) {
+    if (dto.role !== Role.ADMIN) {
       throw new ForbiddenException(
-        'Le rôle demandé ne peut pas être attribué lors de l’inscription publique',
+        'L’inscription publique est fermée : seul le compte ADMIN initial peut être créé ici',
       );
     }
 
@@ -49,17 +54,13 @@ export class AuthService {
             throw new UnauthorizedException('Établissement introuvable');
           }
 
-          let role: Role = Role.ETUDIANT;
-          if (dto.role === Role.ADMIN) {
-            const existingUser = await tx.user.findFirst({
-              select: { id: true },
-            });
-            if (existingUser) {
-              throw new ForbiddenException(
-                'Le compte ADMIN initial a déjà été créé',
-              );
-            }
-            role = Role.ADMIN;
+          const existingUser = await tx.user.findFirst({
+            select: { id: true },
+          });
+          if (existingUser) {
+            throw new ForbiddenException(
+              'Le compte ADMIN initial a déjà été créé',
+            );
           }
 
           return tx.user.create({
@@ -70,7 +71,7 @@ export class AuthService {
               email: dto.email,
               telephone: dto.telephone,
               motDePasseHash: passwordHash,
-              role,
+              role: Role.ADMIN,
             },
             select: publicUserSelect,
           });

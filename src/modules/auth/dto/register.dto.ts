@@ -38,7 +38,8 @@ export class RegisterDto {
 
   @ApiPropertyOptional({
     enum: Role,
-    description: 'Rôle demandé (ADMIN initial ou ETUDIANT)',
+    description:
+      'Doit valoir ADMIN (bootstrap) ; tout autre rôle est refusé (403)',
   })
   @IsOptional()
   @IsEnum(Role)

@@ -24,9 +24,15 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  @ApiOperation({ summary: 'Créer un compte utilisateur' })
-  @ApiCreatedResponse({ description: 'Compte créé' })
+  @ApiOperation({
+    summary:
+      'Bootstrap : créer le compte ADMIN initial (base sans utilisateur)',
+  })
+  @ApiCreatedResponse({ description: 'Compte ADMIN initial créé' })
   @ApiBadRequestResponse({ description: 'Données invalides' })
+  @ApiForbiddenResponse({
+    description: 'Rôle autre que ADMIN, ou ADMIN initial déjà créé',
+  })
   @ApiConflictResponse({ description: 'Adresse e-mail déjà utilisée' })
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
