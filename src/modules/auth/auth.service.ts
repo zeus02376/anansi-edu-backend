@@ -1,16 +1,14 @@
 import {
-  ForbiddenException,
   Injectable,
   UnauthorizedException,
   ConflictException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma, Role } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
 
 const publicUserSelect = {
   id: true,
@@ -29,69 +27,6 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
   ) {}
-
-  /**
-   * Bootstrap uniquement : crée le compte ADMIN initial tant qu'aucun
-   * utilisateur n'existe. Les autres comptes passent par create-staff
-   * (ADMIN) ou par la création d'étudiant depuis une candidature.
-   */
-  async register(dto: RegisterDto) {
-    if (dto.role !== Role.ADMIN) {
-      throw new ForbiddenException(
-        'L’inscription publique est fermée : seul le compte ADMIN initial peut être créé ici',
-      );
-    }
-
-    const passwordHash = await bcrypt.hash(dto.motDePasse, 12);
-    try {
-      return await this.prisma.$transaction(
-        async (tx) => {
-          const tenant = await tx.tenant.findUnique({
-            where: { id: dto.tenantId },
-            select: { id: true },
-          });
-          if (!tenant) {
-            throw new UnauthorizedException('Établissement introuvable');
-          }
-
-          const existingUser = await tx.user.findFirst({
-            select: { id: true },
-          });
-          if (existingUser) {
-            throw new ForbiddenException(
-              'Le compte ADMIN initial a déjà été créé',
-            );
-          }
-
-          return tx.user.create({
-            data: {
-              tenantId: dto.tenantId,
-              nom: dto.nom,
-              prenom: dto.prenom,
-              email: dto.email,
-              telephone: dto.telephone,
-              motDePasseHash: passwordHash,
-              role: Role.ADMIN,
-            },
-            select: publicUserSelect,
-          });
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException('Cette adresse e-mail est déjà utilisée');
-        }
-        if (error.code === 'P2034') {
-          throw new ConflictException(
-            'Un compte a déjà été créé pendant le bootstrap initial',
-          );
-        }
-      }
-      throw error;
-    }
-  }
 
   async createStaff(tenantId: string, dto: CreateStaffDto) {
     const passwordHash = await bcrypt.hash(dto.motDePasse, 12);

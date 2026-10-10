@@ -16,27 +16,11 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { AuthService } from './auth.service';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
 
 @Controller('auth')
 @ApiTags('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
-  @Post('register')
-  @ApiOperation({
-    summary:
-      'Bootstrap : créer le compte ADMIN initial (base sans utilisateur)',
-  })
-  @ApiCreatedResponse({ description: 'Compte ADMIN initial créé' })
-  @ApiBadRequestResponse({ description: 'Données invalides' })
-  @ApiForbiddenResponse({
-    description: 'Rôle autre que ADMIN, ou ADMIN initial déjà créé',
-  })
-  @ApiConflictResponse({ description: 'Adresse e-mail déjà utilisée' })
-  register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
-  }
 
   @Post('login')
   @ApiOperation({ summary: 'Se connecter et obtenir un JWT' })

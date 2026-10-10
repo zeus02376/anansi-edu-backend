@@ -32,6 +32,16 @@
 $ npm install
 ```
 
+## Authentication and account provisioning
+
+- `POST /auth/register` is disabled. The initial `ADMIN` account must be provisioned
+  through a controlled operational process; user accounts cannot be created anonymously.
+- An authenticated `ADMIN` creates `SCOLARITE` or `ENSEIGNANT` accounts with
+  `POST /auth/create-staff`.
+- Student accounts are created only from accepted applications with
+  `POST /etudiants`. The response contains a one-time temporary password; the student
+  must change it with authenticated `PATCH /auth/change-password`.
+
 ## Compile and run the project
 
 ```bash
