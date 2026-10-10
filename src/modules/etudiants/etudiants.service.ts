@@ -1,8 +1,5 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { StatutCandidature, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { formatMatricule } from '../../common/utils/matricule.util';
@@ -13,7 +10,7 @@ import { CreateEtudiantDto } from './dto/create-etudiant.dto';
 export class EtudiantsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createFromCandidature(data: CreateEtudiantDto) {
+  async create(data: CreateEtudiantDto) {
     const candidature = await this.prisma.candidature.findUnique({
       where: { id: data.candidatureId },
     });
@@ -21,10 +18,15 @@ export class EtudiantsService {
       throw new NotFoundException('Candidature introuvable');
     }
     if (candidature.statut !== StatutCandidature.ACCEPTE) {
-      throw new ConflictException('La candidature doit être acceptée');
+      throw new BadRequestException('La candidature doit être acceptée');
+    }
+    if (candidature.tenantId !== data.tenantId) {
+      throw new BadRequestException(
+        'Le tenant doit correspondre à celui de la candidature',
+      );
     }
 
-    const passwordHash = await bcrypt.hash(data.motDePasse, 12);
+    const passwordHash = await bcrypt.hash(randomUUID(), 12);
     const year = new Date().getFullYear();
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -49,7 +51,6 @@ export class EtudiantsService {
           dateNaissance: candidature.dateNaissance,
           lieuNaissance: candidature.lieuNaissance,
           nationalite: candidature.nationalite,
-          photoUrl: data.photoUrl,
         },
         include: {
           user: {

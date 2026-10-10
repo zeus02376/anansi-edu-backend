@@ -27,6 +27,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user || user.statut !== 'ACTIF') {
       throw new UnauthorizedException('Compte inactif ou introuvable');
     }
-    return user;
+    return { ...user, sub: payload.sub };
   }
 }

@@ -34,7 +34,7 @@ export class EtudiantsController {
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'Candidature introuvable' })
   create(@Body() dto: CreateEtudiantDto) {
-    return this.service.createFromCandidature(dto);
+    return this.service.create(dto);
   }
   @Get()
   @ApiOperation({ summary: 'Lister les étudiants' })

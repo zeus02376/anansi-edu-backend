@@ -6,9 +6,9 @@ import { InscriptionDto } from './dto/inscription.dto';
 export class InscriptionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(data: InscriptionDto, createdBy: string) {
+  create(data: InscriptionDto, userId: string) {
     return this.prisma.inscription.create({
-      data: { ...data, createdBy },
+      data: { ...data, createdBy: userId },
     });
   }
 

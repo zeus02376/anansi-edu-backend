@@ -6,7 +6,7 @@ import {
   Param,
   Post,
   Put,
-  Req,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
@@ -42,9 +42,9 @@ export class InscriptionsController {
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   create(
     @Body() dto: InscriptionDto,
-    @Req() request: { user: { id: string } },
+    @Request() req: { user: { sub: string } },
   ) {
-    return this.service.create(dto, request.user.id);
+    return this.service.create(dto, req.user.sub);
   }
   @Get()
   @ApiOperation({ summary: 'Lister les inscriptions' })
