@@ -26,6 +26,7 @@ async function bootstrap() {
     .addBearerAuth()
     .addTag('auth')
     .addTag('tenants')
+    .addTag('campus')
     .addTag('ecoles')
     .addTag('filieres')
     .addTag('niveaux')
