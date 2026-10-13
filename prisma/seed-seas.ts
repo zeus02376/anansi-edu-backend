@@ -10,8 +10,7 @@
  */
 import 'dotenv/config';
 import { Cycle, Langue, PrismaClient, StatutDonnees } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { resolveTenant, runSeed } from './seed-utils';
 
 const CAMPUS_NOM = 'Logbessou';
 const ECOLE = {
@@ -88,28 +87,13 @@ const FILIERES: FiliereSeed[] = [
   },
 ];
 
-async function resolveTenantId(): Promise<string> {
-  const slug = process.env.SEED_TENANT_SLUG;
-  if (slug) {
-    const tenant = await prisma.tenant.findUnique({ where: { slug } });
-    if (!tenant) throw new Error(`Aucun tenant avec le slug « ${slug} »`);
-    return tenant.id;
-  }
-  const tenants = await prisma.tenant.findMany({ select: { id: true } });
-  if (tenants.length !== 1) {
-    throw new Error(
-      `${tenants.length} tenant(s) trouvé(s) : précisez SEED_TENANT_SLUG`,
-    );
-  }
-  return tenants[0].id;
-}
-
-async function main() {
-  const tenantId = await resolveTenantId();
+export async function seedSeas(
+  prisma: PrismaClient,
+  tenantId: string,
+  print: (line: string) => void = console.log,
+) {
   const log = (action: 'créé' | 'existant', label: string) =>
-    console.log(
-      `  ${action === 'créé' ? '+' : '='} ${action.padEnd(8)} ${label}`,
-    );
+    print(`  ${action === 'créé' ? '+' : '='} ${action.padEnd(8)} ${label}`);
 
   let campus = await prisma.campus.findUnique({
     where: { tenantId_nom: { tenantId, nom: CAMPUS_NOM } },
@@ -141,10 +125,9 @@ async function main() {
   }
 }
 
-main()
-  .then(() => console.log('Seed SEAS terminé.'))
-  .catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  })
-  .finally(() => prisma.$disconnect());
+if (require.main === module) {
+  runSeed('Seed SEAS', async (prisma) => {
+    const tenant = await resolveTenant(prisma);
+    await seedSeas(prisma, tenant.id);
+  });
+}
