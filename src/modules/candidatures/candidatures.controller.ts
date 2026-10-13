@@ -20,8 +20,10 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -37,9 +39,15 @@ export class CandidaturesController {
   constructor(private readonly service: CandidaturesService) {}
 
   @Post()
+  @UseGuards(ThrottlerGuard)
   @ApiOperation({ summary: 'Soumettre une candidature publique' })
   @ApiCreatedResponse({ description: 'Candidature soumise' })
   @ApiBadRequestResponse({ description: 'Données invalides' })
+  @ApiConflictResponse({
+    description:
+      'Candidature déjà en cours pour cet e-mail, cette filière et cette année',
+  })
+  @ApiTooManyRequestsResponse({ description: 'Limite de débit atteinte' })
   create(@Body() dto: CreateCandidatureDto) {
     return this.service.create(dto);
   }

@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { StatutCandidature } from '@prisma/client';
+import { Prisma, StatutCandidature } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -30,45 +30,81 @@ export const TRANSITIONS: Record<StatutCandidature, StatutCandidature[]> = {
 export class CandidaturesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(data: CreateCandidatureDto) {
+  async create(data: CreateCandidatureDto) {
+    try {
+      return await this.createInTransaction(data);
+    } catch (error) {
+      // Deux dépôts simultanés : la transaction sérialisable en rejette un
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2034'
+      ) {
+        throw new ConflictException(
+          'Dépôt concurrent détecté : vérifiez votre candidature avant de réessayer',
+        );
+      }
+      throw error;
+    }
+  }
+
+  private createInTransaction(data: CreateCandidatureDto) {
     const year = new Date().getFullYear();
     const numeroDossier = `CAND-${year}-${randomUUID().slice(0, 8).toUpperCase()}`;
-    return this.prisma.$transaction(async (tx) => {
-      const [tenant, filiere, anneeAcademique] = await Promise.all([
-        tx.tenant.findUnique({
-          where: { id: data.tenantId },
+    return this.prisma.$transaction(
+      async (tx) => {
+        const [tenant, filiere, anneeAcademique] = await Promise.all([
+          tx.tenant.findUnique({
+            where: { id: data.tenantId },
+            select: { id: true },
+          }),
+          tx.filiere.findFirst({
+            where: { id: data.filiereId, ecole: { tenantId: data.tenantId } },
+            select: { id: true },
+          }),
+          tx.anneeAcademique.findFirst({
+            where: { id: data.anneeAcademiqueId, tenantId: data.tenantId },
+            select: { id: true },
+          }),
+        ]);
+        if (!tenant) {
+          throw new BadRequestException('Établissement introuvable');
+        }
+        if (!filiere) {
+          throw new BadRequestException(
+            'Filière introuvable pour cet établissement',
+          );
+        }
+        if (!anneeAcademique) {
+          throw new BadRequestException(
+            'Année académique introuvable pour cet établissement',
+          );
+        }
+        // Une seule candidature active (non rejetée) par e-mail, filière et année.
+        // Le message ne révèle pas le numéro de dossier existant.
+        const doublon = await tx.candidature.findFirst({
+          where: {
+            email: { equals: data.email, mode: 'insensitive' },
+            filiereId: data.filiereId,
+            anneeAcademiqueId: data.anneeAcademiqueId,
+            statut: { not: REJETE },
+          },
           select: { id: true },
-        }),
-        tx.filiere.findFirst({
-          where: { id: data.filiereId, ecole: { tenantId: data.tenantId } },
-          select: { id: true },
-        }),
-        tx.anneeAcademique.findFirst({
-          where: { id: data.anneeAcademiqueId, tenantId: data.tenantId },
-          select: { id: true },
-        }),
-      ]);
-      if (!tenant) {
-        throw new BadRequestException('Établissement introuvable');
-      }
-      if (!filiere) {
-        throw new BadRequestException(
-          'Filière introuvable pour cet établissement',
-        );
-      }
-      if (!anneeAcademique) {
-        throw new BadRequestException(
-          'Année académique introuvable pour cet établissement',
-        );
-      }
-      return tx.candidature.create({
-        data: {
-          ...data,
-          dateNaissance: new Date(data.dateNaissance),
-          numeroDossier,
-        },
-      });
-    });
+        });
+        if (doublon) {
+          throw new ConflictException(
+            'Une candidature est déjà en cours pour cet e-mail, cette filière et cette année académique',
+          );
+        }
+        return tx.candidature.create({
+          data: {
+            ...data,
+            dateNaissance: new Date(data.dateNaissance),
+            numeroDossier,
+          },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   findAll(tenantId: string) {

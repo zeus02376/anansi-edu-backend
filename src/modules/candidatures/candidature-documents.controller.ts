@@ -26,7 +26,9 @@ import {
   ApiOperation,
   ApiPayloadTooLargeResponse,
   ApiTags,
+  ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { memoryStorage } from 'multer';
 import { StaffOnly } from '../../common/decorators/staff-only.decorator';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
@@ -46,7 +48,8 @@ export class CandidatureDocumentsController {
   constructor(private readonly service: CandidatureDocumentsService) {}
 
   @Post()
-  @UseGuards(OptionalJwtAuthGuard)
+  // JWT d'abord : le personnel authentifié échappe à la limite de débit
+  @UseGuards(OptionalJwtAuthGuard, ThrottlerGuard)
   // En mémoire : le fichier n'est écrit sur disque qu'après les contrôles d'accès
   @UseInterceptors(
     FileInterceptor('fichier', {
@@ -80,6 +83,9 @@ export class CandidatureDocumentsController {
   @ApiForbiddenResponse({ description: 'Numéro de dossier / e-mail incorrect' })
   @ApiConflictResponse({ description: 'Candidature déjà acceptée ou rejetée' })
   @ApiPayloadTooLargeResponse({ description: 'Fichier de plus de 10 Mo' })
+  @ApiTooManyRequestsResponse({
+    description: 'Limite de débit atteinte (candidat)',
+  })
   upload(
     @Param('id', uuid) id: string,
     @Body() dto: UploadDocumentDto,
