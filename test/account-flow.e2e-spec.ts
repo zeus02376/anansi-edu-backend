@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 import * as request from 'supertest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from './../src/app.module';
+import { configureApp } from '../src/app.setup';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
 
 const testDatabaseUrl = process.env.E2E_DATABASE_URL;
@@ -28,7 +29,7 @@ describeWithTestDatabase('Account onboarding (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = configureApp(moduleFixture.createNestApplication());
     await app.init();
     prisma = app.get(PrismaService);
   });
