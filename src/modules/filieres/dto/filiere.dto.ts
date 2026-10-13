@@ -68,7 +68,7 @@ export class FiliereDto {
   @ApiPropertyOptional({
     minimum: 0,
     example: 25000,
-    description: 'Renvoyé sous forme de chaîne décimale (ex. "25000")',
+    description: 'Montant en FCFA, renvoyé en nombre (null si non renseigné)',
   })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
@@ -77,7 +77,7 @@ export class FiliereDto {
   @ApiPropertyOptional({
     minimum: 0,
     example: 50000,
-    description: 'Renvoyé sous forme de chaîne décimale (ex. "50000")',
+    description: 'Montant en FCFA, renvoyé en nombre (null si non renseigné)',
   })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })

@@ -1,23 +1,11 @@
 import 'dotenv/config';
-import { ValidationPipe } from '@nestjs/common';
-import { HttpAdapterHost, NestFactory } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
+import { configureApp } from './app.setup';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  app.enableCors({ origin: ['http://localhost:5173'] });
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
-  app.useGlobalFilters(
-    new PrismaExceptionFilter(app.get(HttpAdapterHost).httpAdapter),
-  );
+  const app = configureApp(await NestFactory.create(AppModule));
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('ANANSI EdTech API')
