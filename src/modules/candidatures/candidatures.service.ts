@@ -86,6 +86,40 @@ export class CandidaturesService {
     });
   }
 
+  /**
+   * Suivi public par numéro de dossier exact : sous-ensemble sûr uniquement
+   * (ni e-mail, ni téléphone, ni documents, ni historique).
+   */
+  async suivi(numeroDossier: string) {
+    const candidature = await this.prisma.candidature.findUnique({
+      where: { numeroDossier },
+      select: {
+        numeroDossier: true,
+        statut: true,
+        nom: true,
+        prenom: true,
+        createdAt: true,
+        filiere: {
+          select: { nom: true, code: true, ecole: { select: { nom: true } } },
+        },
+        anneeAcademique: { select: { libelle: true } },
+      },
+    });
+    if (!candidature) {
+      throw new NotFoundException(
+        'Aucune candidature ne correspond à ce numéro de dossier',
+      );
+    }
+    const { createdAt, filiere, anneeAcademique, ...identite } = candidature;
+    return {
+      ...identite,
+      dateDepot: createdAt,
+      filiere: { nom: filiere.nom, code: filiere.code },
+      ecole: filiere.ecole.nom,
+      anneeAcademique: anneeAcademique.libelle,
+    };
+  }
+
   async updateStatus(
     id: string,
     user: { id: string; tenantId: string },

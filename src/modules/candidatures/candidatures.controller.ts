@@ -44,6 +44,18 @@ export class CandidaturesController {
     return this.service.create(dto);
   }
 
+  @Get('suivi/:numeroDossier')
+  @ApiOperation({
+    summary: 'Suivi public d’une candidature par numéro de dossier exact',
+    description:
+      'Renvoie uniquement : numéro, statut, nom, prénom, filière, école, année, date de dépôt.',
+  })
+  @ApiOkResponse({ description: 'État de la candidature' })
+  @ApiNotFoundResponse({ description: 'Numéro de dossier inconnu' })
+  suivi(@Param('numeroDossier') numeroDossier: string) {
+    return this.service.suivi(numeroDossier);
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.SCOLARITE)
