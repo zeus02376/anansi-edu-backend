@@ -20,6 +20,7 @@ import { StaffOnly } from '../../common/decorators/staff-only.decorator';
 import { CatalogueQueryDto } from '../../common/dto/catalogue-query.dto';
 import { PublicTenantService } from '../../common/tenant/public-tenant.service';
 import { FiliereDto } from './dto/filiere.dto';
+import { SuggestionsQueryDto } from './dto/suggestions-query.dto';
 import { FilieresService } from './filieres.service';
 
 @Controller('filieres')
@@ -45,6 +46,22 @@ export class FilieresController {
   @ApiBadRequestResponse({ description: 'Établissement ambigu' })
   async findAll(@Query() query: CatalogueQueryDto) {
     return this.service.findAll(await this.tenants.resolveId(query.tenant));
+  }
+  // Déclarée avant :id, sinon « suggestions » serait lu comme un identifiant
+  @Get('suggestions')
+  @ApiOperation({
+    summary:
+      'Filières filtrées pour l’orientation : langue, niveauEntree, motCle, campusId (public)',
+  })
+  @ApiOkResponse({
+    description: 'Filières correspondantes (liste vide si aucune)',
+  })
+  @ApiBadRequestResponse({ description: 'Paramètre invalide' })
+  async suggestions(@Query() query: SuggestionsQueryDto) {
+    return this.service.suggestions(
+      await this.tenants.resolveId(query.tenant),
+      query,
+    );
   }
   @Get(':id')
   @ApiOperation({
