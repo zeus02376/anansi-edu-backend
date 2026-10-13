@@ -60,7 +60,7 @@ describeWithTestDatabase('Seed SEAS (e2e)', () => {
     const token = await login(app, email, 'Password123');
 
     const ecoles = await request(app.getHttpServer())
-      .get('/ecoles')
+      .get(`/ecoles?tenant=e2e-${suffix}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
     const seas = ecoles.body.find(

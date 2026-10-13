@@ -6,74 +6,64 @@ import {
   Param,
   Post,
   Put,
-  UseGuards,
+  Query,
 } from '@nestjs/common';
-import { Role } from '@prisma/client';
 import {
   ApiBadRequestResponse,
-  ApiBearerAuth,
   ApiCreatedResponse,
-  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
-  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { StaffOnly } from '../../common/decorators/staff-only.decorator';
+import { CatalogueQueryDto } from '../../common/dto/catalogue-query.dto';
+import { PublicTenantService } from '../../common/tenant/public-tenant.service';
 import { EcoleDto } from './dto/ecole.dto';
 import { EcolesService } from './ecoles.service';
 
 @Controller('ecoles')
 @ApiTags('ecoles')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN, Role.SCOLARITE)
 export class EcolesController {
-  constructor(private readonly service: EcolesService) {}
+  constructor(
+    private readonly service: EcolesService,
+    private readonly tenants: PublicTenantService,
+  ) {}
   @Post()
+  @StaffOnly()
   @ApiOperation({ summary: 'Créer une école' })
   @ApiCreatedResponse({ description: 'École créée' })
   @ApiBadRequestResponse({ description: 'Données invalides' })
-  @ApiUnauthorizedResponse({ description: 'Authentification requise' })
-  @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   create(@Body() dto: EcoleDto) {
     return this.service.create(dto);
   }
   @Get()
-  @ApiOperation({ summary: 'Lister les écoles' })
+  @ApiOperation({ summary: 'Lister les écoles avec leur campus (public)' })
   @ApiOkResponse({ description: 'Liste des écoles' })
-  @ApiUnauthorizedResponse({ description: 'Authentification requise' })
-  @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
-  findAll() {
-    return this.service.findAll();
+  @ApiBadRequestResponse({ description: 'Établissement ambigu' })
+  async findAll(@Query() query: CatalogueQueryDto) {
+    return this.service.findAll(await this.tenants.resolveId(query.tenant));
   }
   @Get(':id')
-  @ApiOperation({ summary: 'Consulter une école' })
+  @ApiOperation({ summary: 'Consulter une école et son campus (public)' })
   @ApiOkResponse({ description: 'École trouvée' })
-  @ApiUnauthorizedResponse({ description: 'Authentification requise' })
-  @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'École introuvable' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  async findOne(@Param('id') id: string, @Query() query: CatalogueQueryDto) {
+    return this.service.findOne(await this.tenants.resolveId(query.tenant), id);
   }
   @Put(':id')
+  @StaffOnly()
   @ApiOperation({ summary: 'Modifier une école' })
   @ApiOkResponse({ description: 'École modifiée' })
   @ApiBadRequestResponse({ description: 'Données invalides' })
-  @ApiUnauthorizedResponse({ description: 'Authentification requise' })
-  @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'École introuvable' })
   update(@Param('id') id: string, @Body() dto: EcoleDto) {
     return this.service.update(id, dto);
   }
   @Delete(':id')
+  @StaffOnly()
   @ApiOperation({ summary: 'Supprimer une école' })
   @ApiOkResponse({ description: 'École supprimée' })
-  @ApiUnauthorizedResponse({ description: 'Authentification requise' })
-  @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'École introuvable' })
   remove(@Param('id') id: string) {
     return this.service.remove(id);

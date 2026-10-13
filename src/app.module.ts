@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { PublicTenantModule } from './common/tenant/public-tenant.module';
 import { AnneesAcademiquesModule } from './modules/annees-academiques/annees-academiques.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CampusModule } from './modules/campus/campus.module';
@@ -18,6 +19,7 @@ import { TenantsModule } from './modules/tenants/tenants.module';
 @Module({
   imports: [
     PrismaModule,
+    PublicTenantModule,
     AuthModule,
     TenantsModule,
     CampusModule,
