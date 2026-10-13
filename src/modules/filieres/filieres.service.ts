@@ -1,24 +1,65 @@
 import { Injectable } from '@nestjs/common';
+import { Langue, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { FiliereDto } from './dto/filiere.dto';
+import { SuggestionsQueryDto } from './dto/suggestions-query.dto';
+
+// Toute filière est renvoyée avec son école et le campus de celle-ci
+const withEcole = { ecole: { include: { campus: true } } } as const;
 
 @Injectable()
 export class FilieresService {
   constructor(private readonly prisma: PrismaService) {}
   create(data: FiliereDto) {
-    return this.prisma.filiere.create({ data });
+    return this.prisma.filiere.create({ data, include: withEcole });
   }
   findAll(tenantId: string) {
     return this.prisma.filiere.findMany({
       where: { ecole: { tenantId } },
+      include: withEcole,
       orderBy: { nom: 'asc' },
     });
   }
-  findOne(id: string) {
-    return this.prisma.filiere.findUniqueOrThrow({ where: { id } });
+  /** Simple filtre sur les champs existants : ni scoring ni IA. */
+  suggestions(
+    tenantId: string,
+    { langue, niveauEntree, motCle, campusId }: SuggestionsQueryDto,
+  ) {
+    const contains = (value: string) => ({
+      contains: value,
+      mode: Prisma.QueryMode.insensitive,
+    });
+    const where: Prisma.FiliereWhereInput = {
+      ecole: { tenantId, ...(campusId && { campusId }) },
+      ...(langue && { langue: { in: [langue, Langue.FR_EN] } }),
+      ...(niveauEntree && { niveauEntree: contains(niveauEntree) }),
+      ...(motCle && {
+        OR: [
+          { nom: contains(motCle) },
+          { code: contains(motCle) },
+          { ecole: { nom: contains(motCle) } },
+          { ecole: { description: contains(motCle) } },
+        ],
+      }),
+    };
+    return this.prisma.filiere.findMany({
+      where,
+      include: withEcole,
+      orderBy: { nom: 'asc' },
+    });
+  }
+  findOne(tenantId: string, id: string) {
+    return this.prisma.filiere.findFirstOrThrow({
+      where: { id, ecole: { tenantId } },
+      include: withEcole,
+    });
   }
   update(id: string, data: FiliereDto) {
-    return this.prisma.filiere.update({ where: { id }, data });
+    return this.prisma.filiere.update({
+      where: { id },
+      data,
+      include: withEcole,
+    });
   }
   remove(id: string) {
     return this.prisma.filiere.delete({ where: { id } });

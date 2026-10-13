@@ -6,75 +6,85 @@ import {
   Param,
   Post,
   Put,
-  Req,
-  UseGuards,
+  Query,
 } from '@nestjs/common';
-import { Role } from '@prisma/client';
 import {
   ApiBadRequestResponse,
-  ApiBearerAuth,
   ApiCreatedResponse,
-  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
-  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { StaffOnly } from '../../common/decorators/staff-only.decorator';
+import { CatalogueQueryDto } from '../../common/dto/catalogue-query.dto';
+import { PublicTenantService } from '../../common/tenant/public-tenant.service';
 import { FiliereDto } from './dto/filiere.dto';
+import { SuggestionsQueryDto } from './dto/suggestions-query.dto';
 import { FilieresService } from './filieres.service';
 
 @Controller('filieres')
 @ApiTags('filieres')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN, Role.SCOLARITE)
 export class FilieresController {
-  constructor(private readonly service: FilieresService) {}
+  constructor(
+    private readonly service: FilieresService,
+    private readonly tenants: PublicTenantService,
+  ) {}
   @Post()
+  @StaffOnly()
   @ApiOperation({ summary: 'Créer une filière' })
   @ApiCreatedResponse({ description: 'Filière créée' })
   @ApiBadRequestResponse({ description: 'Données invalides' })
-  @ApiUnauthorizedResponse({ description: 'Authentification requise' })
-  @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   create(@Body() dto: FiliereDto) {
     return this.service.create(dto);
   }
   @Get()
-  @ApiOperation({ summary: 'Lister les filières' })
+  @ApiOperation({
+    summary: 'Lister les filières avec école et campus (public)',
+  })
   @ApiOkResponse({ description: 'Liste des filières' })
-  @ApiUnauthorizedResponse({ description: 'Authentification requise' })
-  @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
-  findAll(@Req() request: { user: { tenantId: string } }) {
-    return this.service.findAll(request.user.tenantId);
+  @ApiBadRequestResponse({ description: 'Établissement ambigu' })
+  async findAll(@Query() query: CatalogueQueryDto) {
+    return this.service.findAll(await this.tenants.resolveId(query.tenant));
+  }
+  // Déclarée avant :id, sinon « suggestions » serait lu comme un identifiant
+  @Get('suggestions')
+  @ApiOperation({
+    summary:
+      'Filières filtrées pour l’orientation : langue, niveauEntree, motCle, campusId (public)',
+  })
+  @ApiOkResponse({
+    description: 'Filières correspondantes (liste vide si aucune)',
+  })
+  @ApiBadRequestResponse({ description: 'Paramètre invalide' })
+  async suggestions(@Query() query: SuggestionsQueryDto) {
+    return this.service.suggestions(
+      await this.tenants.resolveId(query.tenant),
+      query,
+    );
   }
   @Get(':id')
-  @ApiOperation({ summary: 'Consulter une filière' })
+  @ApiOperation({
+    summary: 'Consulter une filière avec école et campus (public)',
+  })
   @ApiOkResponse({ description: 'Filière trouvée' })
-  @ApiUnauthorizedResponse({ description: 'Authentification requise' })
-  @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'Filière introuvable' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  async findOne(@Param('id') id: string, @Query() query: CatalogueQueryDto) {
+    return this.service.findOne(await this.tenants.resolveId(query.tenant), id);
   }
   @Put(':id')
+  @StaffOnly()
   @ApiOperation({ summary: 'Modifier une filière' })
   @ApiOkResponse({ description: 'Filière modifiée' })
   @ApiBadRequestResponse({ description: 'Données invalides' })
-  @ApiUnauthorizedResponse({ description: 'Authentification requise' })
-  @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'Filière introuvable' })
   update(@Param('id') id: string, @Body() dto: FiliereDto) {
     return this.service.update(id, dto);
   }
   @Delete(':id')
+  @StaffOnly()
   @ApiOperation({ summary: 'Supprimer une filière' })
   @ApiOkResponse({ description: 'Filière supprimée' })
-  @ApiUnauthorizedResponse({ description: 'Authentification requise' })
-  @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'Filière introuvable' })
   remove(@Param('id') id: string) {
     return this.service.remove(id);

@@ -35,8 +35,10 @@ export class CreateCandidatureDto {
   @ApiProperty({ example: 'Camerounaise' })
   @IsString()
   nationalite: string;
-  @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @ApiProperty({ format: 'uuid', description: 'Filière visée (obligatoire)' })
+  @IsUUID(undefined, {
+    message: 'filiereId est obligatoire et doit identifier une filière',
+  })
   filiereId: string;
   @ApiProperty({ format: 'uuid' })
   @IsUUID()

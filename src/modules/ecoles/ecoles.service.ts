@@ -9,15 +9,16 @@ export class EcolesService {
     await this.assertCampusInTenant(data);
     return this.prisma.ecole.create({ data, include: { campus: true } });
   }
-  findAll() {
+  findAll(tenantId: string) {
     return this.prisma.ecole.findMany({
+      where: { tenantId },
       include: { campus: true },
       orderBy: { nom: 'asc' },
     });
   }
-  findOne(id: string) {
-    return this.prisma.ecole.findUniqueOrThrow({
-      where: { id },
+  findOne(tenantId: string, id: string) {
+    return this.prisma.ecole.findFirstOrThrow({
+      where: { id, tenantId },
       include: { campus: true },
     });
   }

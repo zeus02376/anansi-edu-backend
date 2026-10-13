@@ -89,21 +89,27 @@ describeWithTestDatabase('Campus, écoles et filières enrichies (e2e)', () => {
     });
 
     it('un SCOLARITE lit la liste et le détail', async () => {
-      await http().get('/campus').set(as(Role.SCOLARITE)).expect(200);
       await http()
-        .get(`/campus/${campusId}`)
+        .get(`/campus?tenant=e2e-${suffix}`)
         .set(as(Role.SCOLARITE))
         .expect(200);
       await http()
-        .get(`/campus/${MISSING_ID}`)
+        .get(`/campus/${campusId}?tenant=e2e-${suffix}`)
+        .set(as(Role.SCOLARITE))
+        .expect(200);
+      await http()
+        .get(`/campus/${MISSING_ID}?tenant=e2e-${suffix}`)
         .set(as(Role.SCOLARITE))
         .expect(404);
     });
 
     it.each([Role.ENSEIGNANT, Role.ETUDIANT])(
-      'refuse l’accès au rôle %s (403)',
+      'le rôle %s lit le catalogue mais ne peut pas écrire (403)',
       async (role) => {
-        await http().get('/campus').set(as(role)).expect(403);
+        await http()
+          .get(`/campus?tenant=e2e-${suffix}`)
+          .set(as(role))
+          .expect(200);
         await http()
           .post('/campus')
           .set(as(role))
@@ -112,8 +118,9 @@ describeWithTestDatabase('Campus, écoles et filières enrichies (e2e)', () => {
       },
     );
 
-    it('refuse l’accès anonyme (401)', async () => {
-      await http().get('/campus').expect(401);
+    it('lecture anonyme autorisée, écriture anonyme refusée (401)', async () => {
+      await http().get(`/campus?tenant=e2e-${suffix}`).expect(200);
+      await http().post('/campus').send({ nom: 'Anonyme' }).expect(401);
     });
 
     describe('écoles rattachées', () => {
@@ -128,7 +135,7 @@ describeWithTestDatabase('Campus, écoles et filières enrichies (e2e)', () => {
         ecoleId = created.body.id;
 
         const { body } = await http()
-          .get(`/ecoles/${ecoleId}`)
+          .get(`/ecoles/${ecoleId}?tenant=e2e-${suffix}`)
           .set(as(Role.SCOLARITE))
           .expect(200);
         expect(body.campus).toMatchObject({
@@ -136,7 +143,9 @@ describeWithTestDatabase('Campus, écoles et filières enrichies (e2e)', () => {
           nom: 'Bonamoussadi',
         });
 
-        const list = await http().get('/ecoles').set(as(Role.ADMIN));
+        const list = await http()
+          .get(`/ecoles?tenant=e2e-${suffix}`)
+          .set(as(Role.ADMIN));
         expect(
           list.body.find((e: { id: string }) => e.id === ecoleId).campus.id,
         ).toBe(campusId);
@@ -151,12 +160,14 @@ describeWithTestDatabase('Campus, écoles et filières enrichies (e2e)', () => {
       });
 
       it('compte et liste les écoles du campus', async () => {
-        const list = await http().get('/campus').set(as(Role.ADMIN));
+        const list = await http()
+          .get(`/campus?tenant=e2e-${suffix}`)
+          .set(as(Role.ADMIN));
         const campus = list.body.find((c: { id: string }) => c.id === campusId);
         expect(campus._count.ecoles).toBe(1);
 
         const { body } = await http()
-          .get(`/campus/${campusId}`)
+          .get(`/campus/${campusId}?tenant=e2e-${suffix}`)
           .set(as(Role.ADMIN));
         expect(body.ecoles.map((e: { id: string }) => e.id)).toEqual([ecoleId]);
       });
@@ -212,7 +223,7 @@ describeWithTestDatabase('Campus, écoles et filières enrichies (e2e)', () => {
           expect(created.body).toMatchObject(full);
 
           const { body } = await http()
-            .get(`/filieres/${created.body.id}`)
+            .get(`/filieres/${created.body.id}?tenant=e2e-${suffix}`)
             .set(as(Role.SCOLARITE))
             .expect(200);
           expect(body).toMatchObject({ ecoleId, ...full });
