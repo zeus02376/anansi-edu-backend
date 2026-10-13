@@ -20,6 +20,7 @@ model Tenant {
   candidatures      Candidature[]
   etudiants         Etudiant[]
   enseignants       Enseignant[]
+  campus            Campus[]
 }
 
 model User {
@@ -61,21 +62,60 @@ model Ecole {
   nom         String
   code        String
   description String?
+  campusId    String?
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  // Restrict : un campus avec des écoles rattachées ne peut pas être supprimé
+  campus   Campus?   @relation(fields: [campusId], references: [id], onDelete: Restrict)
   filieres Filiere[]
 }
 
+enum StatutDonnees {
+  CONFIRME
+  A_CONFIRMER
+}
+
+enum ModeAdmission {
+  CONCOURS
+  ETUDE_DOSSIER
+  ENTRETIEN
+}
+
+model Campus {
+  id            String        @id @default(uuid())
+  tenantId      String
+  nom           String
+  code          String?
+  adresse       String?
+  description   String?
+  statutDonnees StatutDonnees @default(A_CONFIRMER)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  ecoles        Ecole[]
+
+  @@unique([tenantId, nom])
+}
+
 model Filiere {
-  id          String @id @default(uuid())
-  ecoleId     String
-  nom         String
-  code        String
-  cycle       Cycle
-  regime      Regime
-  langue      Langue
-  dureeAnnees Int
-  tutelle     String
+  id                       String         @id @default(uuid())
+  ecoleId                  String
+  nom                      String
+  code                     String
+  cycle                    Cycle
+  // Optionnels : une filière peut être créée au minimum puis complétée
+  regime                   Regime?
+  langue                   Langue?
+  dureeAnnees              Int?
+  tutelle                  String?
+  credits                  Int?
+  niveauEntree             String?
+  diplomeRequis            String?
+  modeAdmission            ModeAdmission?
+  fraisCandidatureNational Decimal?
+  fraisCandidatureEtranger Decimal?
+  piecesRequises           String[]       @default([])
+  statutDonnees            StatutDonnees  @default(A_CONFIRMER)
 
   ecole        Ecole         @relation(fields: [ecoleId], references: [id])
   niveaux      Niveau[]
@@ -88,6 +128,9 @@ enum Cycle {
   LICENCE
   MASTER
   INGENIEUR
+  BSC
+  BBA
+  BENG
 }
 
 enum Regime {

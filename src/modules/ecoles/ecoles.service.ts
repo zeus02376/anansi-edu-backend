@@ -1,23 +1,48 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EcoleDto } from './dto/ecole.dto';
 
 @Injectable()
 export class EcolesService {
   constructor(private readonly prisma: PrismaService) {}
-  create(data: EcoleDto) {
-    return this.prisma.ecole.create({ data });
+  async create(data: EcoleDto) {
+    await this.assertCampusInTenant(data);
+    return this.prisma.ecole.create({ data, include: { campus: true } });
   }
   findAll() {
-    return this.prisma.ecole.findMany({ orderBy: { nom: 'asc' } });
+    return this.prisma.ecole.findMany({
+      include: { campus: true },
+      orderBy: { nom: 'asc' },
+    });
   }
   findOne(id: string) {
-    return this.prisma.ecole.findUniqueOrThrow({ where: { id } });
+    return this.prisma.ecole.findUniqueOrThrow({
+      where: { id },
+      include: { campus: true },
+    });
   }
-  update(id: string, data: EcoleDto) {
-    return this.prisma.ecole.update({ where: { id }, data });
+  async update(id: string, data: EcoleDto) {
+    await this.assertCampusInTenant(data);
+    return this.prisma.ecole.update({
+      where: { id },
+      data,
+      include: { campus: true },
+    });
   }
   remove(id: string) {
     return this.prisma.ecole.delete({ where: { id } });
+  }
+
+  private async assertCampusInTenant({ campusId, tenantId }: EcoleDto) {
+    if (!campusId) return;
+    const campus = await this.prisma.campus.findFirst({
+      where: { id: campusId, tenantId },
+      select: { id: true },
+    });
+    if (!campus) {
+      throw new BadRequestException(
+        'Le campus doit exister et appartenir au même tenant que l’école',
+      );
+    }
   }
 }

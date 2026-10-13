@@ -15,4 +15,12 @@ export class EcoleDto {
   @IsOptional()
   @IsString()
   description?: string;
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description: 'Campus de rattachement (même tenant) ; null pour détacher',
+  })
+  @IsOptional()
+  @IsUUID()
+  campusId?: string | null;
 }

@@ -3,6 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AnneesAcademiquesModule } from './modules/annees-academiques/annees-academiques.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { CampusModule } from './modules/campus/campus.module';
 import { CandidaturesModule } from './modules/candidatures/candidatures.module';
 import { EcolesModule } from './modules/ecoles/ecoles.module';
 import { EnseignantsModule } from './modules/enseignants/enseignants.module';
@@ -19,6 +20,7 @@ import { TenantsModule } from './modules/tenants/tenants.module';
     PrismaModule,
     AuthModule,
     TenantsModule,
+    CampusModule,
     EcolesModule,
     FilieresModule,
     NiveauxModule,
