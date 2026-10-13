@@ -81,6 +81,13 @@ async function main() {
   let candidatureAccepted = false;
   if (token) {
     try {
+      // Transitions imposées : une candidature SOUMIS doit passer EN_EXAMEN
+      // avant ACCEPTE (sans effet si elle y est déjà ou plus loin)
+      await request(`/candidatures/${CANDIDATURE_ID}/statut`, {
+        method: 'PATCH',
+        token,
+        body: { statut: 'EN_EXAMEN' },
+      });
       const result = await request(`/candidatures/${CANDIDATURE_ID}/statut`, {
         method: 'PATCH',
         token,

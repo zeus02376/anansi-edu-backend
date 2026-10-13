@@ -13,6 +13,7 @@ import { Role } from '@prisma/client';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
@@ -72,18 +73,30 @@ export class CandidaturesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.SCOLARITE)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Modifier le statut d’une candidature' })
+  @ApiOperation({
+    summary: 'Modifier le statut d’une candidature',
+    description:
+      'Transitions : SOUMIS → EN_EXAMEN | INCOMPLET | REJETE ; INCOMPLET → EN_EXAMEN | REJETE ; ' +
+      'EN_EXAMEN → ACCEPTE | REJETE | INCOMPLET ; ACCEPTE → EN_EXAMEN | REJETE (tant qu’aucun ' +
+      'compte étudiant n’existe) ; REJETE → EN_EXAMEN. Commentaire obligatoire pour rejeter ou rouvrir.',
+  })
   @ApiOkResponse({ description: 'Statut modifié et historique enregistré' })
-  @ApiBadRequestResponse({ description: 'Données invalides' })
+  @ApiBadRequestResponse({
+    description:
+      'Statut identique, transition interdite ou commentaire manquant',
+  })
+  @ApiConflictResponse({
+    description: 'ACCEPTE définitif : un compte étudiant existe',
+  })
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'Candidature introuvable' })
   updateStatus(
     @Param('id') id: string,
-    @Req() request: { user: { id: string } },
+    @Req() request: { user: { id: string; tenantId: string } },
     @Body() dto: UpdateCandidatureStatusDto,
   ) {
-    return this.service.updateStatus(id, request.user.id, dto);
+    return this.service.updateStatus(id, request.user, dto);
   }
 
   @Delete(':id')
