@@ -20,7 +20,14 @@ describeWithTestDatabase('Catalogue public (e2e)', () => {
   const otherSuffix = `${suffix}-autre`;
   const tenant = `e2e-${suffix}`;
   const ids = {} as Record<
-    'tenant' | 'other' | 'campus' | 'ecole' | 'filiere' | 'otherEcole',
+    | 'tenant'
+    | 'other'
+    | 'campus'
+    | 'ecole'
+    | 'filiere'
+    | 'otherEcole'
+    | 'otherFiliere'
+    | 'annee',
     string
   >;
   const tokens = {} as Record<Role, string>;
@@ -61,11 +68,24 @@ describeWithTestDatabase('Catalogue public (e2e)', () => {
         code: 'AUTRE',
       },
     });
+    const otherFiliere = await prisma.filiere.create({
+      data: { ecoleId: otherEcole.id, nom: 'Autre', code: 'AUT', cycle: 'HND' },
+    });
+    const annee = await prisma.anneeAcademique.create({
+      data: {
+        tenantId: ids.tenant,
+        libelle: `E2E-${suffix}`,
+        dateDebut: new Date('2026-10-01T00:00:00.000Z'),
+        dateFin: new Date('2027-07-31T00:00:00.000Z'),
+      },
+    });
     Object.assign(ids, {
       campus: campus.id,
       ecole: ecole.id,
       filiere: filiere.id,
       otherEcole: otherEcole.id,
+      otherFiliere: otherFiliere.id,
+      annee: annee.id,
     });
 
     for (const role of [Role.ENSEIGNANT, Role.ETUDIANT]) {
@@ -195,6 +215,67 @@ describeWithTestDatabase('Catalogue public (e2e)', () => {
       expect(
         await prisma.filiere.count({ where: { ecoleId: ids.ecole } }),
       ).toBe(1);
+    });
+  });
+
+  describe('candidature liée à une filière', () => {
+    const candidature = (override: Record<string, unknown> = {}) =>
+      http()
+        .post('/candidatures')
+        .send({
+          tenantId: ids.tenant,
+          nom: 'Ndi',
+          prenom: 'Amina',
+          email: `amina-${suffix}@example.test`,
+          dateNaissance: '2005-01-15T00:00:00.000Z',
+          lieuNaissance: 'Douala',
+          nationalite: 'Camerounaise',
+          filiereId: ids.filiere,
+          anneeAcademiqueId: ids.annee,
+          ...override,
+        });
+    const message = (body: { message: string | string[] }) =>
+      [body.message].flat().join(' ');
+
+    it.each([
+      ['absente', undefined],
+      ['qui n’est pas un identifiant', 'pas-un-uuid'],
+    ])('refuse une filière %s (400)', async (_label, filiereId) => {
+      const { body } = await candidature({ filiereId }).expect(400);
+      expect(message(body)).toContain(
+        'filiereId est obligatoire et doit identifier une filière',
+      );
+    });
+
+    it('refuse une filière inexistante (400, message explicite)', async () => {
+      const { body } = await candidature({
+        filiereId: '00000000-0000-4000-8000-000000000000',
+      }).expect(400);
+      expect(message(body)).toBe('Filière introuvable pour cet établissement');
+    });
+
+    it('refuse une filière d’un autre établissement (400)', async () => {
+      const { body } = await candidature({
+        filiereId: ids.otherFiliere,
+      }).expect(400);
+      expect(message(body)).toBe('Filière introuvable pour cet établissement');
+    });
+
+    it('distingue établissement et année académique introuvables', async () => {
+      const unknown = '00000000-0000-4000-8000-000000000000';
+      const tenantError = await candidature({ tenantId: unknown }).expect(400);
+      expect(message(tenantError.body)).toBe('Établissement introuvable');
+      const anneeError = await candidature({
+        anneeAcademiqueId: unknown,
+      }).expect(400);
+      expect(message(anneeError.body)).toBe(
+        'Année académique introuvable pour cet établissement',
+      );
+    });
+
+    it('accepte une filière valide du même établissement (201)', async () => {
+      const { body } = await candidature().expect(201);
+      expect(body).toMatchObject({ filiereId: ids.filiere, statut: 'SOUMIS' });
     });
   });
 });

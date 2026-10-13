@@ -32,9 +32,17 @@ export class CandidaturesService {
           select: { id: true },
         }),
       ]);
-      if (!tenant || !filiere || !anneeAcademique) {
+      if (!tenant) {
+        throw new BadRequestException('Établissement introuvable');
+      }
+      if (!filiere) {
         throw new BadRequestException(
-          'Établissement, filière et année académique doivent exister dans le même tenant',
+          'Filière introuvable pour cet établissement',
+        );
+      }
+      if (!anneeAcademique) {
+        throw new BadRequestException(
+          'Année académique introuvable pour cet établissement',
         );
       }
       return tx.candidature.create({
