@@ -158,11 +158,14 @@ describeWithTestDatabase('Account onboarding (e2e)', () => {
       })
       .expect(201);
 
-    await request(app.getHttpServer())
-      .patch(`/candidatures/${application.body.id}/statut`)
-      .set('Authorization', `Bearer ${scolariteToken}`)
-      .send({ statut: 'ACCEPTE' })
-      .expect(200);
+    // Transition imposée : SOUMIS → EN_EXAMEN → ACCEPTE
+    for (const statut of ['EN_EXAMEN', 'ACCEPTE']) {
+      await request(app.getHttpServer())
+        .patch(`/candidatures/${application.body.id}/statut`)
+        .set('Authorization', `Bearer ${scolariteToken}`)
+        .send({ statut })
+        .expect(200);
+    }
 
     const student = await request(app.getHttpServer())
       .post('/etudiants')
