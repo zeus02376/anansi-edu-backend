@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  Injectable,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TenantDto } from './dto/tenant.dto';
@@ -36,19 +40,25 @@ export class TenantsService {
     }
   }
 
-  findAll() {
-    return this.prisma.tenant.findMany({ orderBy: { nom: 'asc' } });
+  findMine(tenantId: string) {
+    return this.prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
   }
 
-  findOne(id: string) {
-    return this.prisma.tenant.findUniqueOrThrow({ where: { id } });
+  /** Un identifiant autre que celui du JWT répond 404, comme une ressource absente. */
+  findOne(tenantId: string, id: string) {
+    if (id !== tenantId) {
+      throw new NotFoundException('Établissement introuvable');
+    }
+    return this.findMine(tenantId);
   }
 
-  update(id: string, data: TenantDto) {
+  async update(tenantId: string, id: string, data: TenantDto) {
+    await this.findOne(tenantId, id);
     return this.prisma.tenant.update({ where: { id }, data });
   }
 
-  remove(id: string) {
+  async remove(tenantId: string, id: string) {
+    await this.findOne(tenantId, id);
     return this.prisma.tenant.delete({ where: { id } });
   }
 }
