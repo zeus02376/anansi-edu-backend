@@ -7,6 +7,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -35,8 +36,11 @@ export class FilieresController {
   @ApiOperation({ summary: 'Créer une filière' })
   @ApiCreatedResponse({ description: 'Filière créée' })
   @ApiBadRequestResponse({ description: 'Données invalides' })
-  create(@Body() dto: FiliereDto) {
-    return this.service.create(dto);
+  create(
+    @Body() dto: FiliereDto,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.create(request.user.tenantId, dto);
   }
   @Get()
   @ApiOperation({
@@ -78,15 +82,22 @@ export class FilieresController {
   @ApiOkResponse({ description: 'Filière modifiée' })
   @ApiBadRequestResponse({ description: 'Données invalides' })
   @ApiNotFoundResponse({ description: 'Filière introuvable' })
-  update(@Param('id') id: string, @Body() dto: FiliereDto) {
-    return this.service.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: FiliereDto,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.update(request.user.tenantId, id, dto);
   }
   @Delete(':id')
   @StaffOnly()
   @ApiOperation({ summary: 'Supprimer une filière' })
   @ApiOkResponse({ description: 'Filière supprimée' })
   @ApiNotFoundResponse({ description: 'Filière introuvable' })
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(
+    @Param('id') id: string,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.remove(request.user.tenantId, id);
   }
 }

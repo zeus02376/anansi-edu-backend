@@ -7,6 +7,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -34,8 +35,11 @@ export class EcolesController {
   @ApiOperation({ summary: 'Créer une école' })
   @ApiCreatedResponse({ description: 'École créée' })
   @ApiBadRequestResponse({ description: 'Données invalides' })
-  create(@Body() dto: EcoleDto) {
-    return this.service.create(dto);
+  create(
+    @Body() dto: EcoleDto,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.create(request.user.tenantId, dto);
   }
   @Get()
   @ApiOperation({ summary: 'Lister les écoles avec leur campus (public)' })
@@ -57,15 +61,22 @@ export class EcolesController {
   @ApiOkResponse({ description: 'École modifiée' })
   @ApiBadRequestResponse({ description: 'Données invalides' })
   @ApiNotFoundResponse({ description: 'École introuvable' })
-  update(@Param('id') id: string, @Body() dto: EcoleDto) {
-    return this.service.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: EcoleDto,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.update(request.user.tenantId, id, dto);
   }
   @Delete(':id')
   @StaffOnly()
   @ApiOperation({ summary: 'Supprimer une école' })
   @ApiOkResponse({ description: 'École supprimée' })
   @ApiNotFoundResponse({ description: 'École introuvable' })
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(
+    @Param('id') id: string,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.remove(request.user.tenantId, id);
   }
 }

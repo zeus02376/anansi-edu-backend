@@ -21,6 +21,18 @@ export class TenantScopeService {
     if (!found) throw new NotFoundException(`${label} introuvable`);
   }
 
+  campus(tenantId: string, id: string) {
+    return this.prisma.campus
+      .findFirst({ where: { id, tenantId }, select: { id: true } })
+      .then((found) => this.assert(found, 'Campus'));
+  }
+
+  ecole(tenantId: string, id: string) {
+    return this.prisma.ecole
+      .findFirst({ where: { id, tenantId }, select: { id: true } })
+      .then((found) => this.assert(found, 'École'));
+  }
+
   filiere(tenantId: string, id: string) {
     return this.prisma.filiere
       .findFirst({

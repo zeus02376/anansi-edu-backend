@@ -2,9 +2,15 @@ import { IsOptional, IsString, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class EcoleDto {
-  @ApiProperty({ format: 'uuid' })
+  @ApiPropertyOptional({
+    format: 'uuid',
+    deprecated: true,
+    description:
+      'Ignoré : l’établissement est celui du JWT. Conservé pour les anciens clients.',
+  })
+  @IsOptional()
   @IsUUID()
-  tenantId: string;
+  tenantId?: string;
   @ApiProperty({ example: 'École d’ingénieurs' })
   @IsString()
   nom: string;

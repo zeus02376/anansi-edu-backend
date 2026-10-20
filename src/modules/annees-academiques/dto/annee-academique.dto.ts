@@ -8,9 +8,15 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class AnneeAcademiqueDto {
-  @ApiProperty({ format: 'uuid' })
+  @ApiPropertyOptional({
+    format: 'uuid',
+    deprecated: true,
+    description:
+      'Ignoré : l’établissement est celui du JWT. Conservé pour les anciens clients.',
+  })
+  @IsOptional()
   @IsUUID()
-  tenantId: string;
+  tenantId?: string;
   @ApiProperty({ example: '2025-2026' })
   @IsString()
   libelle: string;
