@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { TenantScopeService } from '../../common/tenant/tenant-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { InscriptionDto } from './dto/inscription.dto';
@@ -12,9 +13,10 @@ export class InscriptionsService {
 
   async create(tenantId: string, data: InscriptionDto, userId: string) {
     await this.assertReferences(tenantId, data);
-    return this.prisma.inscription.create({
-      data: { ...data, createdBy: userId },
-    });
+    await this.assertUneInscriptionParAnnee(data);
+    return this.unique(() =>
+      this.prisma.inscription.create({ data: { ...data, createdBy: userId } }),
+    );
   }
 
   findAll(tenantId: string) {
@@ -43,12 +45,52 @@ export class InscriptionsService {
   async update(tenantId: string, id: string, data: InscriptionDto) {
     await this.scope.inscription(tenantId, id);
     await this.assertReferences(tenantId, data);
-    return this.prisma.inscription.update({ where: { id }, data });
+    await this.assertUneInscriptionParAnnee(data, id);
+    return this.unique(() =>
+      this.prisma.inscription.update({ where: { id }, data }),
+    );
   }
 
   async remove(tenantId: string, id: string) {
     await this.scope.inscription(tenantId, id);
     return this.prisma.inscription.delete({ where: { id } });
+  }
+
+  /** Un étudiant n'a qu'une inscription par année académique (hors celle modifiée). */
+  private async assertUneInscriptionParAnnee(
+    data: InscriptionDto,
+    excludeId?: string,
+  ) {
+    const existante = await this.prisma.inscription.findFirst({
+      where: {
+        etudiantId: data.etudiantId,
+        anneeAcademiqueId: data.anneeAcademiqueId,
+        ...(excludeId && { id: { not: excludeId } }),
+      },
+      select: { id: true },
+    });
+    if (existante) throw this.inscriptionExistante();
+  }
+
+  /** Deux requêtes simultanées : la contrainte d'unicité tranche, avec le même message. */
+  private async unique<T>(action: () => Promise<T>) {
+    try {
+      return await action();
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw this.inscriptionExistante();
+      }
+      throw error;
+    }
+  }
+
+  private inscriptionExistante() {
+    return new ConflictException(
+      'Cet étudiant a déjà une inscription pour cette année académique',
+    );
   }
 
   private async assertReferences(tenantId: string, data: InscriptionDto) {

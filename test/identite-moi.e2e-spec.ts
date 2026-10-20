@@ -78,7 +78,16 @@ describeWithTestDatabase('Routes « moi » : identité par le JWT (e2e)', () => 
         code: `M-${label}`,
       },
     });
-    return { ecole, filiere, niveau, annee1, annee2, matiere };
+    // Une matière par année : un enseignant n'est affecté qu'une fois à une matière
+    const matiere2 = await prisma.matiere.create({
+      data: {
+        niveauId: niveau.id,
+        anneeAcademiqueId: annee2.id,
+        nom: `Réseaux ${label}`,
+        code: `R-${label}`,
+      },
+    });
+    return { ecole, filiere, niveau, annee1, annee2, matiere, matiere2 };
   }
 
   async function etudiant(
@@ -171,7 +180,7 @@ describeWithTestDatabase('Routes « moi » : identité par le JWT (e2e)', () => 
           await prisma.affectation.create({
             data: {
               enseignantId: e.id,
-              matiereId: s.matiere.id,
+              matiereId: annee === s.annee1 ? s.matiere.id : s.matiere2.id,
               anneeAcademiqueId: annee.id,
             },
           })
