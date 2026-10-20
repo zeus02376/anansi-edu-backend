@@ -84,6 +84,26 @@ export class TenantScopeService {
       .then((found) => this.assert(found, 'Utilisateur'));
   }
 
+  evaluation(tenantId: string, id: string) {
+    return this.prisma.evaluation
+      .findFirst({
+        where: { id, matiere: matiereInTenant(tenantId) },
+        select: { id: true },
+      })
+      .then((found) => this.assert(found, 'Évaluation'));
+  }
+
+  /** Toutes les inscriptions doivent appartenir à l'établissement, sinon 404. */
+  async inscriptions(tenantId: string, ids: string[]) {
+    const found = await this.prisma.inscription.findMany({
+      where: { id: { in: ids }, etudiant: { tenantId } },
+      select: { id: true },
+    });
+    if (found.length !== new Set(ids).size) {
+      throw new NotFoundException('Inscription introuvable');
+    }
+  }
+
   inscription(tenantId: string, id: string) {
     return this.prisma.inscription
       .findFirst({

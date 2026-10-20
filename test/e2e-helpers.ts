@@ -92,6 +92,14 @@ export async function cleanupTenant(prisma: PrismaService, tenantId: string) {
   const inTenant = { candidature: { tenantId } };
   await prisma.historiqueCandidature.deleteMany({ where: inTenant });
   await prisma.documentCandidature.deleteMany({ where: inTenant });
+  const evaluations = {
+    evaluation: { matiere: { niveau: { filiere: { ecole: { tenantId } } } } },
+  };
+  await prisma.noteHistorique.deleteMany({ where: { note: evaluations } });
+  await prisma.note.deleteMany({ where: evaluations });
+  await prisma.evaluation.deleteMany({
+    where: { matiere: { niveau: { filiere: { ecole: { tenantId } } } } },
+  });
   await prisma.inscription.deleteMany({ where: { etudiant: { tenantId } } });
   await prisma.affectation.deleteMany({ where: { enseignant: { tenantId } } });
   await prisma.enseignant.deleteMany({ where: { tenantId } });
