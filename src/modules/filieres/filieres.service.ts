@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Langue, Prisma } from '@prisma/client';
+import { TenantScopeService } from '../../common/tenant/tenant-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { FiliereDto } from './dto/filiere.dto';
 import { SuggestionsQueryDto } from './dto/suggestions-query.dto';
@@ -9,8 +10,12 @@ const withEcole = { ecole: { include: { campus: true } } } as const;
 
 @Injectable()
 export class FilieresService {
-  constructor(private readonly prisma: PrismaService) {}
-  create(data: FiliereDto) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scope: TenantScopeService,
+  ) {}
+  async create(tenantId: string, data: FiliereDto) {
+    await this.scope.ecole(tenantId, data.ecoleId);
     return this.prisma.filiere.create({ data, include: withEcole });
   }
   findAll(tenantId: string) {
@@ -54,14 +59,17 @@ export class FilieresService {
       include: withEcole,
     });
   }
-  update(id: string, data: FiliereDto) {
+  async update(tenantId: string, id: string, data: FiliereDto) {
+    await this.scope.filiere(tenantId, id);
+    await this.scope.ecole(tenantId, data.ecoleId);
     return this.prisma.filiere.update({
       where: { id },
       data,
       include: withEcole,
     });
   }
-  remove(id: string) {
+  async remove(tenantId: string, id: string) {
+    await this.scope.filiere(tenantId, id);
     return this.prisma.filiere.delete({ where: { id } });
   }
 }

@@ -52,8 +52,11 @@ export class AnneesAcademiquesController {
   @ApiOperation({ summary: 'Créer une année académique' })
   @ApiCreatedResponse({ description: 'Année académique créée' })
   @ApiBadRequestResponse({ description: 'Données invalides' })
-  create(@Body() dto: AnneeAcademiqueDto) {
-    return this.service.create(dto);
+  create(
+    @Body() dto: AnneeAcademiqueDto,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.create(request.user.tenantId, dto);
   }
 
   @Get()
@@ -69,8 +72,11 @@ export class AnneesAcademiquesController {
   @ApiOperation({ summary: 'Consulter une année académique' })
   @ApiOkResponse({ description: 'Année académique trouvée' })
   @ApiNotFoundResponse({ description: 'Année académique introuvable' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.findOne(request.user.tenantId, id);
   }
 
   @Put(':id')
@@ -79,8 +85,12 @@ export class AnneesAcademiquesController {
   @ApiOkResponse({ description: 'Année académique modifiée' })
   @ApiBadRequestResponse({ description: 'Données invalides' })
   @ApiNotFoundResponse({ description: 'Année académique introuvable' })
-  update(@Param('id') id: string, @Body() dto: AnneeAcademiqueDto) {
-    return this.service.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: AnneeAcademiqueDto,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.update(request.user.tenantId, id, dto);
   }
 
   @Delete(':id')
@@ -88,7 +98,10 @@ export class AnneesAcademiquesController {
   @ApiOperation({ summary: 'Supprimer une année académique' })
   @ApiOkResponse({ description: 'Année académique supprimée' })
   @ApiNotFoundResponse({ description: 'Année académique introuvable' })
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(
+    @Param('id') id: string,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.remove(request.user.tenantId, id);
   }
 }

@@ -1,14 +1,22 @@
 import { Injectable } from '@nestjs/common';
+import { TenantScopeService } from '../../common/tenant/tenant-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnneeAcademiqueDto } from './dto/annee-academique.dto';
 
 @Injectable()
 export class AnneesAcademiquesService {
-  constructor(private readonly prisma: PrismaService) {}
-  create(data: AnneeAcademiqueDto) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scope: TenantScopeService,
+  ) {}
+  create(tenantId: string, data: AnneeAcademiqueDto) {
+    // L'établissement vient du JWT : le tenantId du corps est ignoré
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { tenantId: _ignored, ...fields } = data;
     return this.prisma.anneeAcademique.create({
       data: {
-        ...data,
+        ...fields,
+        tenantId,
         dateDebut: new Date(data.dateDebut),
         dateFin: new Date(data.dateFin),
       },
@@ -28,20 +36,26 @@ export class AnneesAcademiquesService {
       orderBy: { dateDebut: 'desc' },
     });
   }
-  findOne(id: string) {
-    return this.prisma.anneeAcademique.findUniqueOrThrow({ where: { id } });
+  findOne(tenantId: string, id: string) {
+    return this.prisma.anneeAcademique.findFirstOrThrow({
+      where: { id, tenantId },
+    });
   }
-  update(id: string, data: AnneeAcademiqueDto) {
+  async update(tenantId: string, id: string, data: AnneeAcademiqueDto) {
+    await this.scope.anneeAcademique(tenantId, id);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { tenantId: _ignored, ...fields } = data;
     return this.prisma.anneeAcademique.update({
       where: { id },
       data: {
-        ...data,
+        ...fields,
         dateDebut: new Date(data.dateDebut),
         dateFin: new Date(data.dateFin),
       },
     });
   }
-  remove(id: string) {
+  async remove(tenantId: string, id: string) {
+    await this.scope.anneeAcademique(tenantId, id);
     return this.prisma.anneeAcademique.delete({ where: { id } });
   }
 }

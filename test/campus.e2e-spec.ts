@@ -151,12 +151,12 @@ describeWithTestDatabase('Campus, écoles et filières enrichies (e2e)', () => {
         ).toBe(campusId);
       });
 
-      it('refuse un campus inexistant (400)', async () => {
+      it('refuse un campus inexistant (404)', async () => {
         await http()
           .post('/ecoles')
           .set(as(Role.ADMIN))
           .send({ tenantId, nom: 'X', code: 'X', campusId: MISSING_ID })
-          .expect(400);
+          .expect(404);
       });
 
       it('compte et liste les écoles du campus', async () => {

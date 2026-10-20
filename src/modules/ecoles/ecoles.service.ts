@@ -1,13 +1,23 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { TenantScopeService } from '../../common/tenant/tenant-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EcoleDto } from './dto/ecole.dto';
 
 @Injectable()
 export class EcolesService {
-  constructor(private readonly prisma: PrismaService) {}
-  async create(data: EcoleDto) {
-    await this.assertCampusInTenant(data);
-    return this.prisma.ecole.create({ data, include: { campus: true } });
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scope: TenantScopeService,
+  ) {}
+  async create(tenantId: string, data: EcoleDto) {
+    await this.assertCampus(tenantId, data);
+    // L'établissement vient du JWT : le tenantId du corps est ignoré
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { tenantId: _ignored, ...fields } = data;
+    return this.prisma.ecole.create({
+      data: { ...fields, tenantId },
+      include: { campus: true },
+    });
   }
   findAll(tenantId: string) {
     return this.prisma.ecole.findMany({
@@ -22,28 +32,23 @@ export class EcolesService {
       include: { campus: true },
     });
   }
-  async update(id: string, data: EcoleDto) {
-    await this.assertCampusInTenant(data);
+  async update(tenantId: string, id: string, data: EcoleDto) {
+    await this.scope.ecole(tenantId, id);
+    await this.assertCampus(tenantId, data);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { tenantId: _ignored, ...fields } = data;
     return this.prisma.ecole.update({
       where: { id },
-      data,
+      data: fields,
       include: { campus: true },
     });
   }
-  remove(id: string) {
+  async remove(tenantId: string, id: string) {
+    await this.scope.ecole(tenantId, id);
     return this.prisma.ecole.delete({ where: { id } });
   }
 
-  private async assertCampusInTenant({ campusId, tenantId }: EcoleDto) {
-    if (!campusId) return;
-    const campus = await this.prisma.campus.findFirst({
-      where: { id: campusId, tenantId },
-      select: { id: true },
-    });
-    if (!campus) {
-      throw new BadRequestException(
-        'Le campus doit exister et appartenir au même tenant que l’école',
-      );
-    }
+  private async assertCampus(tenantId: string, { campusId }: EcoleDto) {
+    if (campusId) await this.scope.campus(tenantId, campusId);
   }
 }
