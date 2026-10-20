@@ -105,12 +105,7 @@ export class EtudiantsService {
       where: { id, tenantId },
       include: {
         user: { select: { id: true, nom: true, prenom: true, email: true } },
-        inscriptions: {
-          include: {
-            niveau: true,
-            anneeAcademique: true,
-          },
-        },
+        inscriptions: true,
       },
     });
   }
