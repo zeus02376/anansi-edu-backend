@@ -5,11 +5,15 @@ import { Role } from '@prisma/client';
 /** Noms des limites, pour @SkipThrottle({ [nom]: true }). */
 export const THROTTLE_PUBLIC = 'public';
 export const THROTTLE_SUIVI = 'suivi';
+export const THROTTLE_UPLOAD = 'upload';
 
 /**
  * Limites de débit des routes publiques, par IP (valeurs lues au démarrage) :
- * - « public » : écritures (dépôt de candidature, upload candidat),
- *   5 req / 10 min — THROTTLE_PUBLIC_LIMIT, THROTTLE_PUBLIC_TTL_MS ;
+ * - « public » : dépôt de candidature, 5 req / 10 min —
+ *   THROTTLE_PUBLIC_LIMIT, THROTTLE_PUBLIC_TTL_MS ;
+ * - « upload » : envoi de documents par le candidat, 20 req / 10 min —
+ *   THROTTLE_UPLOAD_LIMIT, THROTTLE_UPLOAD_TTL_MS (compteur distinct du dépôt :
+ *   dépôt + 4 documents + quelques nouveaux essais ne doivent pas se bloquer) ;
  * - « suivi » : consultation par numéro de dossier, plus large mais bornée
  *   contre l'énumération par force brute, 30 req / min —
  *   THROTTLE_SUIVI_LIMIT, THROTTLE_SUIVI_TTL_MS.
@@ -23,6 +27,11 @@ export const PublicThrottleModule = ThrottlerModule.forRootAsync({
         name: THROTTLE_PUBLIC,
         limit: Number(process.env.THROTTLE_PUBLIC_LIMIT ?? 5),
         ttl: Number(process.env.THROTTLE_PUBLIC_TTL_MS ?? 10 * 60 * 1000),
+      },
+      {
+        name: THROTTLE_UPLOAD,
+        limit: Number(process.env.THROTTLE_UPLOAD_LIMIT ?? 20),
+        ttl: Number(process.env.THROTTLE_UPLOAD_TTL_MS ?? 10 * 60 * 1000),
       },
       {
         name: THROTTLE_SUIVI,

@@ -17,6 +17,8 @@ import {
 
 // 4 dépôts dans la suite (dont un 409 : les refus comptent aussi)
 const LIMIT = 4;
+// Limite d'upload distincte de celle du dépôt
+const UPLOAD_LIMIT = 3;
 const PDF = Buffer.from('%PDF-1.4\n%%EOF\n');
 
 describeWithTestDatabase('Anti-doublon et limite de débit (e2e)', () => {
@@ -48,6 +50,7 @@ describeWithTestDatabase('Anti-doublon et limite de débit (e2e)', () => {
   beforeAll(async () => {
     // Limite basse pour cette suite uniquement (process.env isolé par fichier)
     process.env.THROTTLE_PUBLIC_LIMIT = String(LIMIT);
+    process.env.THROTTLE_UPLOAD_LIMIT = String(UPLOAD_LIMIT);
     process.env.UPLOAD_DIR = uploadDir;
     ({ app, prisma, close } = await createE2eApp());
     ids.tenant = (await createTenant(prisma, suffix)).id;
@@ -85,6 +88,7 @@ describeWithTestDatabase('Anti-doublon et limite de débit (e2e)', () => {
     } finally {
       if (close) await close();
       delete process.env.THROTTLE_PUBLIC_LIMIT;
+      delete process.env.THROTTLE_UPLOAD_LIMIT;
       delete process.env.UPLOAD_DIR;
       rmSync(uploadDir, { recursive: true, force: true });
     }
@@ -152,7 +156,7 @@ describeWithTestDatabase('Anti-doublon et limite de débit (e2e)', () => {
         .expect(200);
     });
 
-    it('limite aussi l’upload anonyme, mais pas le personnel authentifié', async () => {
+    it(`limite l’upload anonyme à ${UPLOAD_LIMIT} envois, indépendamment du dépôt, mais pas le personnel`, async () => {
       const [candidature] = await prisma.candidature.findMany({
         where: { tenantId: ids.tenant, statut: 'SOUMIS' },
         take: 1,
@@ -162,16 +166,19 @@ describeWithTestDatabase('Anti-doublon et limite de débit (e2e)', () => {
           .post(`/candidatures/${candidature.id}/documents`)
           .field('typeDocument', 'CNI')
           .attach('fichier', PDF, 'cni.pdf');
-      for (let i = 0; i < LIMIT; i++) {
+      // Le quota de dépôt est épuisé (429 ci-dessus) : l'upload reste possible,
+      // son compteur est distinct
+      for (let i = 0; i < UPLOAD_LIMIT; i++) {
         await upload()
           .field('numeroDossier', candidature.numeroDossier)
           .field('email', candidature.email)
           .expect(201);
       }
-      await upload()
+      const blocked = await upload()
         .field('numeroDossier', candidature.numeroDossier)
         .field('email', candidature.email)
         .expect(429);
+      expect(blocked.headers['retry-after-upload']).toBeDefined();
       await upload().set('Authorization', `Bearer ${token}`).expect(201);
     });
   });

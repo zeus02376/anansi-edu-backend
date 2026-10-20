@@ -28,6 +28,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import {
   THROTTLE_PUBLIC,
   THROTTLE_SUIVI,
+  THROTTLE_UPLOAD,
 } from '../../common/throttle/public-throttle.module';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -44,7 +45,7 @@ export class CandidaturesController {
 
   @Post()
   @UseGuards(ThrottlerGuard)
-  @SkipThrottle({ [THROTTLE_SUIVI]: true })
+  @SkipThrottle({ [THROTTLE_SUIVI]: true, [THROTTLE_UPLOAD]: true })
   @ApiOperation({ summary: 'Soumettre une candidature publique' })
   @ApiCreatedResponse({ description: 'Candidature soumise' })
   @ApiBadRequestResponse({ description: 'Données invalides' })
@@ -60,11 +61,11 @@ export class CandidaturesController {
   @Get('suivi/:numeroDossier')
   // Bornée contre l'énumération des numéros de dossier par force brute
   @UseGuards(ThrottlerGuard)
-  @SkipThrottle({ [THROTTLE_PUBLIC]: true })
+  @SkipThrottle({ [THROTTLE_PUBLIC]: true, [THROTTLE_UPLOAD]: true })
   @ApiOperation({
     summary: 'Suivi public d’une candidature par numéro de dossier exact',
     description:
-      'Renvoie uniquement : numéro, statut, nom, prénom, filière, école, année, date de dépôt. ' +
+      'Renvoie uniquement : id, numéro, statut, nom, prénom, filière, école, année, date de dépôt. ' +
       'Limité à 30 consultations par minute et par IP (THROTTLE_SUIVI_LIMIT / THROTTLE_SUIVI_TTL_MS).',
   })
   @ApiOkResponse({ description: 'État de la candidature' })

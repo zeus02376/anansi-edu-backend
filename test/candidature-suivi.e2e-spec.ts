@@ -94,6 +94,7 @@ describeWithTestDatabase('Suivi public d’une candidature (e2e)', () => {
         'dateDepot',
         'ecole',
         'filiere',
+        'id',
         'nom',
         'numeroDossier',
         'prenom',
@@ -101,6 +102,8 @@ describeWithTestDatabase('Suivi public d’une candidature (e2e)', () => {
       ].sort(),
     );
     expect(body).toMatchObject({
+      // L'identifiant permet l'upload du candidat (qui exige aussi numéro + e-mail)
+      id: candidatureId,
       numeroDossier,
       statut: 'SOUMIS',
       nom: 'Ndi',
@@ -110,7 +113,7 @@ describeWithTestDatabase('Suivi public d’une candidature (e2e)', () => {
       anneeAcademique: '2026-2027',
     });
     const raw = JSON.stringify(body);
-    for (const secret of ['@example.test', '+237', 'cni.pdf', candidatureId]) {
+    for (const secret of ['@example.test', '+237', 'cni.pdf']) {
       expect(raw).not.toContain(secret);
     }
   });
