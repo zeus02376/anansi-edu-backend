@@ -218,6 +218,8 @@ model Affectation {
   enseignant      Enseignant      @relation(fields: [enseignantId], references: [id])
   matiere         Matiere         @relation(fields: [matiereId], references: [id])
   anneeAcademique AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
+
+  @@unique([enseignantId, matiereId])
 }
 
 model Etudiant {
@@ -250,6 +252,8 @@ model Inscription {
   etudiant        Etudiant        @relation(fields: [etudiantId], references: [id])
   niveau          Niveau          @relation(fields: [niveauId], references: [id])
   anneeAcademique AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
+
+  @@unique([etudiantId, anneeAcademiqueId])
 }
 
 enum StatutInscription {

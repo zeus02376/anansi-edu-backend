@@ -332,10 +332,19 @@ describeWithTestDatabase(
       });
 
       it('POST /inscriptions : étudiant, niveau ou année d’un autre établissement → 404', async () => {
+        // Une année sans inscription pour l'étudiant : une seule inscription par année
+        const libre = await prisma.anneeAcademique.create({
+          data: {
+            tenantId: b.tenantId,
+            libelle: `Libre-${suffix}`,
+            dateDebut: new Date('2030-09-01'),
+            dateFin: new Date('2031-07-31'),
+          },
+        });
         const own = {
           etudiantId: b.etudiant,
           niveauId: b.niveau,
-          anneeAcademiqueId: b.annee,
+          anneeAcademiqueId: libre.id,
         };
         for (const croise of [
           { etudiantId: a.etudiant },
@@ -385,7 +394,16 @@ describeWithTestDatabase(
       });
 
       it('POST /enseignants/:id/affectations : enseignant, matière ou année d’un autre établissement → 404', async () => {
-        const own = { matiereId: b.matiere, anneeAcademiqueId: b.annee };
+        // Matière pas encore affectée à cet enseignant : une seule affectation par matière
+        const neuve = await prisma.matiere.create({
+          data: {
+            niveauId: b.niveau,
+            anneeAcademiqueId: b.annee,
+            nom: 'Affectable',
+            code: `AFF-${suffix}`,
+          },
+        });
+        const own = { matiereId: neuve.id, anneeAcademiqueId: b.annee };
         await post(b, `/enseignants/${a.enseignant}/affectations`, own).expect(
           404,
         );

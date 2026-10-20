@@ -1,4 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { matiereInTenant } from '../../common/tenant/tenant-scope.service';
 import { TenantScopeService } from '../../common/tenant/tenant-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AffectationDto, EnseignantDto } from './dto/enseignant.dto';
@@ -51,9 +58,42 @@ export class EnseignantsService {
     data: AffectationDto,
   ) {
     await this.scope.enseignant(tenantId, enseignantId);
-    await this.scope.matiere(tenantId, data.matiereId);
+    const matiere = await this.prisma.matiere.findFirst({
+      where: { id: data.matiereId, ...matiereInTenant(tenantId) },
+      select: { anneeAcademiqueId: true, nom: true },
+    });
+    if (!matiere) throw new NotFoundException('Matière introuvable');
     await this.scope.anneeAcademique(tenantId, data.anneeAcademiqueId);
-    return this.prisma.affectation.create({ data: { ...data, enseignantId } });
+    if (data.anneeAcademiqueId !== matiere.anneeAcademiqueId) {
+      throw new BadRequestException(
+        `L’année de l’affectation doit être celle de la matière « ${matiere.nom} »`,
+      );
+    }
+    const dejaAffecte = await this.prisma.affectation.findFirst({
+      where: { enseignantId, matiereId: data.matiereId },
+      select: { id: true },
+    });
+    if (dejaAffecte) throw this.affectationExistante();
+    try {
+      return await this.prisma.affectation.create({
+        data: { ...data, enseignantId },
+      });
+    } catch (error) {
+      // Deux requêtes simultanées : la contrainte d'unicité tranche
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw this.affectationExistante();
+      }
+      throw error;
+    }
+  }
+
+  private affectationExistante() {
+    return new ConflictException(
+      'Cet enseignant est déjà affecté à cette matière',
+    );
   }
   async findAffectations(tenantId: string, enseignantId: string) {
     await this.scope.enseignant(tenantId, enseignantId);

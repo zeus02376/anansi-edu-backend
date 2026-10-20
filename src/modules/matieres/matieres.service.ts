@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   matiereInTenant,
   TenantScopeService,
@@ -28,8 +32,21 @@ export class MatieresService {
     });
   }
   async update(tenantId: string, id: string, data: MatiereDto) {
-    await this.scope.matiere(tenantId, id);
+    const current = await this.prisma.matiere.findFirst({
+      where: { id, ...matiereInTenant(tenantId) },
+      select: { anneeAcademiqueId: true },
+    });
+    if (!current) throw new NotFoundException('Matière introuvable');
     await this.assertReferences(tenantId, data);
+    // Les affectations portent l'année de leur matière : on ne la déplace pas dessous
+    if (
+      data.anneeAcademiqueId !== current.anneeAcademiqueId &&
+      (await this.prisma.affectation.count({ where: { matiereId: id } })) > 0
+    ) {
+      throw new ConflictException(
+        'L’année d’une matière ne peut pas être modifiée tant que des enseignants lui sont affectés',
+      );
+    }
     return this.prisma.matiere.update({ where: { id }, data });
   }
   async remove(tenantId: string, id: string) {
