@@ -19,7 +19,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed:admin": "ts-node prisma/seed-admin.ts",
-    "seed:seas": "ts-node prisma/seed-seas.ts"
+    "seed:seas": "ts-node prisma/seed-seas.ts",
+    "seed:annee": "ts-node prisma/seed-annee.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
