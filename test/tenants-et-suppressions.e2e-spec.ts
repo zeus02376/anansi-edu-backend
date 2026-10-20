@@ -148,8 +148,12 @@ describeWithTestDatabase(
         expect(own.body.nom).toBe('renomme');
       });
 
-      it('DELETE /tenants/:id : 404 et rien de supprimé pour un autre établissement', async () => {
+      it('DELETE /tenants/:id n’existe plus : aucun établissement supprimable par l’API', async () => {
+        await call('delete', a.admin, `/tenants/${a.tenantId}`).expect(404);
         await call('delete', a.admin, `/tenants/${b.tenantId}`).expect(404);
+        expect(await prisma.tenant.count({ where: { id: a.tenantId } })).toBe(
+          1,
+        );
         expect(await prisma.tenant.count({ where: { id: b.tenantId } })).toBe(
           1,
         );
@@ -165,7 +169,6 @@ describeWithTestDatabase(
           pays: 'x',
           ville: 'x',
         }).expect(403);
-        await call('delete', a.scolarite, `/tenants/${a.tenantId}`).expect(403);
         await request(app.getHttpServer()).get('/tenants/me').expect(401);
       });
     });
