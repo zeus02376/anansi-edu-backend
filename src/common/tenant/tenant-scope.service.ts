@@ -1,0 +1,83 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../../modules/prisma/prisma.service';
+
+/** Filtres Prisma : une entité appartient à un établissement via sa hiérarchie. */
+export const niveauInTenant = (tenantId: string) => ({
+  filiere: { ecole: { tenantId } },
+});
+export const matiereInTenant = (tenantId: string) => ({
+  niveau: niveauInTenant(tenantId),
+});
+
+/**
+ * Vérifie qu'une entité appartient à l'établissement du JWT. Sinon, 404 : une
+ * ressource d'un autre établissement est indiscernable d'une ressource absente.
+ */
+@Injectable()
+export class TenantScopeService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  private async assert(found: { id: string } | null, label: string) {
+    if (!found) throw new NotFoundException(`${label} introuvable`);
+  }
+
+  filiere(tenantId: string, id: string) {
+    return this.prisma.filiere
+      .findFirst({
+        where: { id, ecole: { tenantId } },
+        select: { id: true },
+      })
+      .then((found) => this.assert(found, 'Filière'));
+  }
+
+  niveau(tenantId: string, id: string) {
+    return this.prisma.niveau
+      .findFirst({
+        where: { id, ...niveauInTenant(tenantId) },
+        select: { id: true },
+      })
+      .then((found) => this.assert(found, 'Niveau'));
+  }
+
+  matiere(tenantId: string, id: string) {
+    return this.prisma.matiere
+      .findFirst({
+        where: { id, ...matiereInTenant(tenantId) },
+        select: { id: true },
+      })
+      .then((found) => this.assert(found, 'Matière'));
+  }
+
+  anneeAcademique(tenantId: string, id: string) {
+    return this.prisma.anneeAcademique
+      .findFirst({ where: { id, tenantId }, select: { id: true } })
+      .then((found) => this.assert(found, 'Année académique'));
+  }
+
+  etudiant(tenantId: string, id: string) {
+    return this.prisma.etudiant
+      .findFirst({ where: { id, tenantId }, select: { id: true } })
+      .then((found) => this.assert(found, 'Étudiant'));
+  }
+
+  enseignant(tenantId: string, id: string) {
+    return this.prisma.enseignant
+      .findFirst({ where: { id, tenantId }, select: { id: true } })
+      .then((found) => this.assert(found, 'Enseignant'));
+  }
+
+  user(tenantId: string, id: string) {
+    return this.prisma.user
+      .findFirst({ where: { id, tenantId }, select: { id: true } })
+      .then((found) => this.assert(found, 'Utilisateur'));
+  }
+
+  inscription(tenantId: string, id: string) {
+    return this.prisma.inscription
+      .findFirst({
+        where: { id, etudiant: { tenantId } },
+        select: { id: true },
+      })
+      .then((found) => this.assert(found, 'Inscription'));
+  }
+}

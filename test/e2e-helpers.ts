@@ -31,6 +31,11 @@ export async function createE2eApp() {
   }).compile();
   const app = configureApp(moduleFixture.createNestApplication());
   await app.init();
+  // Prisma recharge .env au démarrage : sans ce retrait, un SMTP configuré en
+  // local (Mailtrap...) enverrait de vrais courriels pendant les tests
+  for (const key of Object.keys(process.env)) {
+    if (key.startsWith('SMTP_')) delete process.env[key];
+  }
 
   const close = async () => {
     await app.close();
@@ -88,9 +93,14 @@ export async function cleanupTenant(prisma: PrismaService, tenantId: string) {
   await prisma.historiqueCandidature.deleteMany({ where: inTenant });
   await prisma.documentCandidature.deleteMany({ where: inTenant });
   await prisma.inscription.deleteMany({ where: { etudiant: { tenantId } } });
+  await prisma.affectation.deleteMany({ where: { enseignant: { tenantId } } });
+  await prisma.enseignant.deleteMany({ where: { tenantId } });
   await prisma.etudiant.deleteMany({ where: { tenantId } });
   await prisma.candidature.deleteMany({ where: { tenantId } });
   await prisma.user.deleteMany({ where: { tenantId } });
+  const filieres = { filiere: { ecole: { tenantId } } };
+  await prisma.matiere.deleteMany({ where: { niveau: filieres } });
+  await prisma.niveau.deleteMany({ where: filieres });
   await prisma.filiere.deleteMany({ where: { ecole: { tenantId } } });
   await prisma.ecole.deleteMany({ where: { tenantId } });
   await prisma.campus.deleteMany({ where: { tenantId } });

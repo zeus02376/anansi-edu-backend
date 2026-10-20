@@ -1,23 +1,44 @@
 import { Injectable } from '@nestjs/common';
+import {
+  matiereInTenant,
+  TenantScopeService,
+} from '../../common/tenant/tenant-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MatiereDto } from './dto/matiere.dto';
 
 @Injectable()
 export class MatieresService {
-  constructor(private readonly prisma: PrismaService) {}
-  create(data: MatiereDto) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scope: TenantScopeService,
+  ) {}
+  async create(tenantId: string, data: MatiereDto) {
+    await this.assertReferences(tenantId, data);
     return this.prisma.matiere.create({ data });
   }
-  findAll() {
-    return this.prisma.matiere.findMany({ orderBy: { nom: 'asc' } });
+  findAll(tenantId: string) {
+    return this.prisma.matiere.findMany({
+      where: matiereInTenant(tenantId),
+      orderBy: { nom: 'asc' },
+    });
   }
-  findOne(id: string) {
-    return this.prisma.matiere.findUniqueOrThrow({ where: { id } });
+  findOne(tenantId: string, id: string) {
+    return this.prisma.matiere.findFirstOrThrow({
+      where: { id, ...matiereInTenant(tenantId) },
+    });
   }
-  update(id: string, data: MatiereDto) {
+  async update(tenantId: string, id: string, data: MatiereDto) {
+    await this.scope.matiere(tenantId, id);
+    await this.assertReferences(tenantId, data);
     return this.prisma.matiere.update({ where: { id }, data });
   }
-  remove(id: string) {
+  async remove(tenantId: string, id: string) {
+    await this.scope.matiere(tenantId, id);
     return this.prisma.matiere.delete({ where: { id } });
+  }
+
+  private async assertReferences(tenantId: string, data: MatiereDto) {
+    await this.scope.niveau(tenantId, data.niveauId);
+    await this.scope.anneeAcademique(tenantId, data.anneeAcademiqueId);
   }
 }
