@@ -8,12 +8,12 @@ datasource db {
 }
 
 model Tenant {
-  id                String             @id @default(uuid())
+  id                String            @id @default(uuid())
   nom               String
-  slug              String             @unique
+  slug              String            @unique
   pays              String
   ville             String
-  createdAt         DateTime           @default(now())
+  createdAt         DateTime          @default(now())
   users             User[]
   ecoles            Ecole[]
   anneesAcademiques AnneeAcademique[]
@@ -173,16 +173,16 @@ model AnneeAcademique {
 }
 
 model Matiere {
-  id                String  @id @default(uuid())
+  id                String @id @default(uuid())
   niveauId          String
   anneeAcademiqueId String
   nom               String
   code              String
-  credits           Int     @default(0)
-  heuresCm          Int     @default(0)
-  heuresTd          Int     @default(0)
-  heuresTp          Int     @default(0)
-  coefficient       Float   @default(1)
+  credits           Int    @default(0)
+  heuresCm          Int    @default(0)
+  heuresTd          Int    @default(0)
+  heuresTp          Int    @default(0)
+  coefficient       Float  @default(1)
 
   niveau          Niveau          @relation(fields: [niveauId], references: [id])
   anneeAcademique AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
@@ -275,11 +275,12 @@ model Candidature {
   numeroDossier     String            @unique
   createdAt         DateTime          @default(now())
 
-  tenant          Tenant                  @relation(fields: [tenantId], references: [id])
-  filiere         Filiere                 @relation(fields: [filiereId], references: [id])
-  anneeAcademique AnneeAcademique         @relation(fields: [anneeAcademiqueId], references: [id])
+  tenant          Tenant                         @relation(fields: [tenantId], references: [id])
+  filiere         Filiere                        @relation(fields: [filiereId], references: [id])
+  anneeAcademique AnneeAcademique                @relation(fields: [anneeAcademiqueId], references: [id])
   documents       DocumentCandidature[]
   historiques     HistoriqueCandidature[]
+  notifications   NotificationCandidatureEmail[]
   etudiant        Etudiant?
 }
 
@@ -321,4 +322,35 @@ model HistoriqueCandidature {
 
   candidature Candidature @relation(fields: [candidatureId], references: [id])
   user        User        @relation(fields: [userId], references: [id])
+}
+
+enum StatutNotificationEmail {
+  EN_ATTENTE
+  EN_COURS
+  ENVOYEE
+  ECHEC
+}
+
+enum TypeNotificationCandidature {
+  RECEPTION
+  CHANGEMENT_STATUT
+}
+
+model NotificationCandidatureEmail {
+  id             String                      @id @default(uuid())
+  candidatureId  String
+  type           TypeNotificationCandidature
+  destinataire   String
+  sujet          String
+  contenu        String                      @db.Text
+  statut         StatutNotificationEmail     @default(EN_ATTENTE)
+  tentatives     Int                         @default(0)
+  derniereErreur String?                     @db.Text
+  envoyeLe       DateTime?
+  createdAt      DateTime                    @default(now())
+
+  candidature Candidature @relation(fields: [candidatureId], references: [id], onDelete: Cascade)
+
+  @@index([candidatureId, createdAt])
+  @@index([statut, createdAt])
 }
