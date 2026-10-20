@@ -42,6 +42,21 @@ $ npm install
   `POST /etudiants`. The response contains a one-time temporary password; the student
   must change it with authenticated `PATCH /auth/change-password`.
 
+## Seed scripts
+
+- `npm run seed:admin`: crée le premier compte ADMIN (requiert
+  `SEED_ADMIN_EMAIL` et `SEED_ADMIN_PASSWORD`).
+- `npm run seed:seas`: crée les données de démonstration SEAS.
+- `npm run seed:annee`: crée l’année académique active du tenant, **uniquement s’il
+  n’en possède pas déjà une** (sans risque à relancer). Par défaut, l’année académique
+  du 1er septembre au 31 juillet, libellée `AAAA-AAAA+1` d’après la date du jour (à partir
+  du 1er août, l’année qui commence en septembre ; sinon celle en cours : le 20 octobre
+  2026 → `2026-2027`). Réglable avec `SEED_ANNEE_LIBELLE` (ex. `2027-2028`),
+  `SEED_ANNEE_DATE_DEBUT` et `SEED_ANNEE_DATE_FIN` (format `AAAA-MM-JJ`). Sans année
+  active, le formulaire de candidature public affiche « candidatures non ouvertes ».
+- Si plusieurs tenants existent, ciblez-en un avec `SEED_TENANT_SLUG`, par exemple
+  `SEED_TENANT_SLUG=iuc npm run seed:annee`.
+
 ## Compile and run the project
 
 ```bash
