@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-  Req,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Req } from '@nestjs/common';
 import {
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -83,16 +74,5 @@ export class TenantsController {
     @Req() request: TenantRequest,
   ) {
     return this.service.update(request.user.tenantId, id, dto);
-  }
-
-  @Delete(':id')
-  @AdminOnly()
-  @ApiOperation({ summary: 'Supprimer son établissement' })
-  @ApiOkResponse({ description: 'Tenant supprimé' })
-  @ApiNotFoundResponse({
-    description: 'Tenant introuvable ou autre établissement',
-  })
-  remove(@Param('id') id: string, @Req() request: TenantRequest) {
-    return this.service.remove(request.user.tenantId, id);
   }
 }

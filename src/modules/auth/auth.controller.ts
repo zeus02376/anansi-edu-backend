@@ -12,6 +12,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AllowTemporaryPassword } from '../../common/decorators/allow-temporary-password.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { AuthService } from './auth.service';
@@ -53,6 +54,7 @@ export class AuthController {
   }
 
   @Patch('change-password')
+  @AllowTemporaryPassword()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Changer son propre mot de passe' })

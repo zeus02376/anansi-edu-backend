@@ -22,6 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         email: true,
         role: true,
         statut: true,
+        doitChangerMotDePasse: true,
       },
     });
     if (!user || user.statut !== 'ACTIF') {

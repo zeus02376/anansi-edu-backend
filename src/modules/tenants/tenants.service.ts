@@ -56,9 +56,4 @@ export class TenantsService {
     await this.findOne(tenantId, id);
     return this.prisma.tenant.update({ where: { id }, data });
   }
-
-  async remove(tenantId: string, id: string) {
-    await this.findOne(tenantId, id);
-    return this.prisma.tenant.delete({ where: { id } });
-  }
 }
