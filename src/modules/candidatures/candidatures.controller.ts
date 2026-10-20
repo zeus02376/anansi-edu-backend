@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -25,6 +26,7 @@ import {
 } from '@nestjs/swagger';
 import { SkipThrottle, ThrottlerGuard } from '@nestjs/throttler';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { StaffOnly } from '../../common/decorators/staff-only.decorator';
 import {
   THROTTLE_PUBLIC,
   THROTTLE_SUIVI,
@@ -47,7 +49,9 @@ export class CandidaturesController {
   @UseGuards(ThrottlerGuard)
   @SkipThrottle({ [THROTTLE_SUIVI]: true, [THROTTLE_UPLOAD]: true })
   @ApiOperation({ summary: 'Soumettre une candidature publique' })
-  @ApiCreatedResponse({ description: 'Candidature soumise' })
+  @ApiCreatedResponse({
+    description: 'Candidature soumise avec état de notification e-mail',
+  })
   @ApiBadRequestResponse({ description: 'Données invalides' })
   @ApiConflictResponse({
     description:
@@ -114,7 +118,10 @@ export class CandidaturesController {
       'EN_EXAMEN → ACCEPTE | REJETE | INCOMPLET ; ACCEPTE → EN_EXAMEN | REJETE (tant qu’aucun ' +
       'compte étudiant n’existe) ; REJETE → EN_EXAMEN. Commentaire obligatoire pour rejeter ou rouvrir.',
   })
-  @ApiOkResponse({ description: 'Statut modifié et historique enregistré' })
+  @ApiOkResponse({
+    description:
+      'Statut modifié, historique enregistré et notification e-mail mise à jour',
+  })
   @ApiBadRequestResponse({
     description:
       'Statut identique, transition interdite ou commentaire manquant',
@@ -131,6 +138,30 @@ export class CandidaturesController {
     @Body() dto: UpdateCandidatureStatusDto,
   ) {
     return this.service.updateStatus(id, request.user, dto);
+  }
+
+  @Post(':id/notifications/:notificationId/retry')
+  @HttpCode(200)
+  @StaffOnly()
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Relancer une notification e-mail en échec',
+  })
+  @ApiOkResponse({ description: 'Notification relancée' })
+  @ApiConflictResponse({
+    description: 'Notification déjà envoyée ou en cours de traitement',
+  })
+  @ApiNotFoundResponse({ description: 'Notification introuvable' })
+  retryNotification(
+    @Param('id') id: string,
+    @Param('notificationId') notificationId: string,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.retryNotification(
+      id,
+      notificationId,
+      request.user.tenantId,
+    );
   }
 
   @Delete(':id')

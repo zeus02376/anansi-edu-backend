@@ -57,6 +57,23 @@ $ npm install
 - Si plusieurs tenants existent, ciblez-en un avec `SEED_TENANT_SLUG`, par exemple
   `SEED_TENANT_SLUG=iuc npm run seed:annee`.
 
+## Notifications e-mail des candidatures
+
+Chaque dépôt de candidature et chaque changement de statut enregistre une notification (table `NotificationCandidatureEmail`) puis envoie un courriel au candidat. Variables d’environnement (voir `.env.example`) :
+
+| Variable | Rôle |
+|---|---|
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM` | Obligatoires pour envoyer (serveur, port, expéditeur) |
+| `SMTP_SECURE` | `true`/`false` ; par défaut `true` uniquement sur le port 465 |
+| `SMTP_USER`, `SMTP_PASSWORD` | Authentification SMTP, à renseigner ensemble |
+| `FRONTEND_PUBLIC_URL` | URL publique du site, pour le lien de suivi du courriel |
+| `CANDIDATURE_EMAIL_WAIT_MS` | Attente maximale d’une requête avant de répondre (défaut 3000 ms) |
+
+- L’envoi ne retient pas la requête plus de `CANDIDATURE_EMAIL_WAIT_MS` : au-delà, la réponse indique la notification `EN_COURS` et l’envoi se termine en arrière-plan.
+- **SMTP non configuré ou en panne** : la candidature est quand même enregistrée, la notification passe à `ECHEC` (réponse : `notification.statut`), et le formulaire public affiche que le courriel n’a pas pu être envoyé en invitant à conserver le numéro de dossier.
+- Le personnel (ADMIN, SCOLARITE) relance un envoi en échec avec `POST /candidatures/:id/notifications/:notificationId/retry`.
+- Après mise à jour : `npx prisma migrate deploy`.
+
 ## Compile and run the project
 
 ```bash
