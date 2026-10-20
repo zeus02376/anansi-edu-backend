@@ -28,10 +28,11 @@ import {
   ApiTags,
   ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, ThrottlerGuard } from '@nestjs/throttler';
 import { memoryStorage } from 'multer';
 import { StaffOnly } from '../../common/decorators/staff-only.decorator';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
+import { THROTTLE_SUIVI } from '../../common/throttle/public-throttle.module';
 import {
   CandidatureDocumentsService,
   MAX_DOCUMENT_SIZE,
@@ -50,6 +51,7 @@ export class CandidatureDocumentsController {
   @Post()
   // JWT d'abord : le personnel authentifié échappe à la limite de débit
   @UseGuards(OptionalJwtAuthGuard, ThrottlerGuard)
+  @SkipThrottle({ [THROTTLE_SUIVI]: true })
   // En mémoire : le fichier n'est écrit sur disque qu'après les contrôles d'accès
   @UseInterceptors(
     FileInterceptor('fichier', {
