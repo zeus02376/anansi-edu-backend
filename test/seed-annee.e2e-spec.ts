@@ -41,6 +41,12 @@ describeWithTestDatabase('Seed année académique (e2e)', () => {
   });
 
   it('crée une année active puis ne modifie rien à la relance', async () => {
+    // Année académique en cours à la date du jour (à partir d'août : celle qui commence en septembre)
+    const today = new Date();
+    const startYear =
+      today.getUTCMonth() >= 7
+        ? today.getUTCFullYear()
+        : today.getUTCFullYear() - 1;
     const first = await seedAnnee(prisma, tenantId, silent);
     const afterFirstRun = await prisma.anneeAcademique.findMany({
       where: { tenantId, active: true },
@@ -48,14 +54,14 @@ describeWithTestDatabase('Seed année académique (e2e)', () => {
     expect(afterFirstRun).toHaveLength(1);
     expect(afterFirstRun[0]).toMatchObject({
       id: first.id,
-      libelle: `${new Date().getUTCFullYear()}`,
+      libelle: `${startYear}-${startYear + 1}`,
       active: true,
     });
     expect(afterFirstRun[0].dateDebut.toISOString()).toBe(
-      `${new Date().getUTCFullYear()}-01-01T00:00:00.000Z`,
+      `${startYear}-09-01T00:00:00.000Z`,
     );
     expect(afterFirstRun[0].dateFin.toISOString()).toBe(
-      `${new Date().getUTCFullYear()}-12-31T00:00:00.000Z`,
+      `${startYear + 1}-07-31T00:00:00.000Z`,
     );
 
     const lines: string[] = [];
@@ -95,16 +101,26 @@ describeWithTestDatabase('Seed année académique (e2e)', () => {
 
   describe('valeurs par défaut et configuration', () => {
     const now = new Date('2026-10-20T12:00:00.000Z');
-    const range = (config = {}) => {
-      const { libelle, dateDebut, dateFin } = resolveAnnee(config, now);
+    const range = (config = {}, today = now) => {
+      const { libelle, dateDebut, dateFin } = resolveAnnee(config, today);
       return [libelle, dateDebut.toISOString(), dateFin.toISOString()];
     };
 
-    it('par défaut : année civile en cours', () => {
-      expect(range()).toEqual([
-        '2026',
-        '2026-01-01T00:00:00.000Z',
-        '2026-12-31T00:00:00.000Z',
+    it.each([
+      ['1er janvier 2027', '2027-01-01', '2026-2027'],
+      ['15 mars 2027', '2027-03-15', '2026-2027'],
+      ['31 juillet 2027', '2027-07-31', '2026-2027'],
+      ['1er août 2027 (candidatures)', '2027-08-01', '2027-2028'],
+      ['1er septembre 2027', '2027-09-01', '2027-2028'],
+      ['20 octobre 2026', '2026-10-20', '2026-2027'],
+      ['31 décembre 2026', '2026-12-31', '2026-2027'],
+      ['31 juillet 2026', '2026-07-31', '2025-2026'],
+    ])('par défaut (%s) : année académique %s', (_label, day, libelle) => {
+      const [debut, fin] = libelle.split('-');
+      expect(range({}, new Date(`${day}T12:00:00.000Z`))).toEqual([
+        libelle,
+        `${debut}-09-01T00:00:00.000Z`,
+        `${fin}-07-31T00:00:00.000Z`,
       ]);
     });
 
@@ -116,9 +132,16 @@ describeWithTestDatabase('Seed année académique (e2e)', () => {
       ]);
     });
 
-    it('un libellé « AAAA » : année civile correspondante', () => {
-      expect(range({ libelle: '2027' })[1]).toBe('2027-01-01T00:00:00.000Z');
-    });
+    it.each(['Rentrée 2026', '2026'])(
+      'le libellé libre « %s » garde les dates de l’année académique par défaut',
+      (libelle) => {
+        expect(range({ libelle })).toEqual([
+          libelle,
+          '2026-09-01T00:00:00.000Z',
+          '2027-07-31T00:00:00.000Z',
+        ]);
+      },
+    );
 
     it('les dates explicites l’emportent sur les valeurs dérivées', () => {
       expect(

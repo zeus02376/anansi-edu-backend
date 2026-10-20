@@ -5,12 +5,16 @@
  *   npm run seed:annee
  *   SEED_TENANT_SLUG=iuc npm run seed:annee   (si plusieurs tenants)
  *
- * Valeurs par défaut : l'année civile en cours (libellé « 2026 », du 1er janvier
- * au 31 décembre). Réglable par variables d'environnement :
- *   SEED_ANNEE_LIBELLE     ex. 2026-2027
+ * Valeurs par défaut : l'année académique (1er septembre → 31 juillet), libellé
+ * « AAAA-AAAA+1 » calculé d'après la date du jour : à partir du 1er août (période
+ * des candidatures) l'année qui commence en septembre, sinon celle en cours
+ * (ex. le 20 octobre 2026 → « 2026-2027 » ; le 15 mars 2027 → « 2026-2027 »).
+ * Réglable par variables d'environnement :
+ *   SEED_ANNEE_LIBELLE     ex. 2027-2028
  *   SEED_ANNEE_DATE_DEBUT  ex. 2026-09-01   (AAAA-MM-JJ)
  *   SEED_ANNEE_DATE_FIN    ex. 2027-07-31
- * Un libellé « AAAA-AAAA » sans dates donne du 1er septembre au 31 juillet.
+ * Un libellé « AAAA-AAAA » sans dates donne du 1er septembre au 31 juillet de ces
+ * années ; tout autre libellé garde les dates de l'année académique par défaut.
  *
  * Refuse (sans rien modifier) de créer un doublon : une année de même libellé
  * mais inactive est signalée plutôt que dupliquée.
@@ -37,20 +41,27 @@ function parseDate(variable: string, value: string): Date {
   return date;
 }
 
+/**
+ * Première année de l'année académique « par défaut » à la date donnée : à partir
+ * du 1er août, celle qui commence en septembre ; avant, celle déjà en cours.
+ */
+export function defaultStartYear(now = new Date()) {
+  return now.getUTCMonth() >= 7
+    ? now.getUTCFullYear()
+    : now.getUTCFullYear() - 1;
+}
+
 /** Libellé et dates à créer : configuration explicite, sinon valeurs par défaut. */
 export function resolveAnnee(config: AnneeConfig = {}, now = new Date()) {
-  const libelle = config.libelle?.trim() || `${now.getUTCFullYear()}`;
+  const startYear = defaultStartYear(now);
+  const libelle = config.libelle?.trim() || `${startYear}-${startYear + 1}`;
 
-  const academic = /^(\d{4})-(\d{4})$/.exec(libelle);
-  const civilYear = /^\d{4}$/.test(libelle)
-    ? Number(libelle)
-    : now.getUTCFullYear();
-  const defaultDebut = academic
-    ? new Date(Date.UTC(Number(academic[1]), 8, 1))
-    : new Date(Date.UTC(civilYear, 0, 1));
-  const defaultFin = academic
-    ? new Date(Date.UTC(Number(academic[2]), 6, 31))
-    : new Date(Date.UTC(civilYear, 11, 31));
+  // « AAAA-AAAA » : ses années ; tout autre libellé : l'année académique par défaut
+  const academic = /^(d{4})-(d{4})$/.exec(libelle);
+  const debutYear = academic ? Number(academic[1]) : startYear;
+  const finYear = academic ? Number(academic[2]) : startYear + 1;
+  const defaultDebut = new Date(Date.UTC(debutYear, 8, 1));
+  const defaultFin = new Date(Date.UTC(finYear, 6, 31));
 
   const dateDebut = config.dateDebut
     ? parseDate('SEED_ANNEE_DATE_DEBUT', config.dateDebut)
