@@ -14,9 +14,15 @@ export class EnseignantDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
   userId: string;
-  @ApiProperty({ format: 'uuid' })
+  @ApiPropertyOptional({
+    format: 'uuid',
+    deprecated: true,
+    description:
+      'Ignoré : l’établissement est celui du JWT. Conservé pour les anciens clients.',
+  })
+  @IsOptional()
   @IsUUID()
-  tenantId: string;
+  tenantId?: string;
   @ApiProperty({ enum: TypeEnseignant })
   @IsEnum(TypeEnseignant)
   type: TypeEnseignant;

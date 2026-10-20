@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
@@ -39,16 +40,19 @@ export class NiveauxController {
   @ApiBadRequestResponse({ description: 'Données invalides' })
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
-  create(@Body() dto: NiveauDto) {
-    return this.service.create(dto);
+  create(
+    @Body() dto: NiveauDto,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.create(request.user.tenantId, dto);
   }
   @Get()
   @ApiOperation({ summary: 'Lister les niveaux' })
   @ApiOkResponse({ description: 'Liste des niveaux' })
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
-  findAll() {
-    return this.service.findAll();
+  findAll(@Req() request: { user: { tenantId: string } }) {
+    return this.service.findAll(request.user.tenantId);
   }
   @Get(':id')
   @ApiOperation({ summary: 'Consulter un niveau' })
@@ -56,8 +60,11 @@ export class NiveauxController {
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'Niveau introuvable' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.findOne(request.user.tenantId, id);
   }
   @Put(':id')
   @ApiOperation({ summary: 'Modifier un niveau' })
@@ -66,8 +73,12 @@ export class NiveauxController {
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'Niveau introuvable' })
-  update(@Param('id') id: string, @Body() dto: NiveauDto) {
-    return this.service.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: NiveauDto,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.update(request.user.tenantId, id, dto);
   }
   @Delete(':id')
   @ApiOperation({ summary: 'Supprimer un niveau' })
@@ -75,7 +86,10 @@ export class NiveauxController {
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'Niveau introuvable' })
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(
+    @Param('id') id: string,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.remove(request.user.tenantId, id);
   }
 }

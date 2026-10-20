@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
@@ -39,16 +40,19 @@ export class EnseignantsController {
   @ApiBadRequestResponse({ description: 'Données invalides' })
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
-  create(@Body() dto: EnseignantDto) {
-    return this.service.create(dto);
+  create(
+    @Body() dto: EnseignantDto,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.create(request.user.tenantId, dto);
   }
   @Get()
   @ApiOperation({ summary: 'Lister les enseignants' })
   @ApiOkResponse({ description: 'Liste des enseignants' })
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
-  findAll() {
-    return this.service.findAll();
+  findAll(@Req() request: { user: { tenantId: string } }) {
+    return this.service.findAll(request.user.tenantId);
   }
   @Get(':id')
   @ApiOperation({ summary: 'Consulter un enseignant' })
@@ -56,8 +60,11 @@ export class EnseignantsController {
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'Enseignant introuvable' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.findOne(request.user.tenantId, id);
   }
   @Put(':id')
   @ApiOperation({ summary: 'Modifier un enseignant' })
@@ -66,8 +73,12 @@ export class EnseignantsController {
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'Enseignant introuvable' })
-  update(@Param('id') id: string, @Body() dto: EnseignantDto) {
-    return this.service.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: EnseignantDto,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.update(request.user.tenantId, id, dto);
   }
   @Delete(':id')
   @ApiOperation({ summary: 'Supprimer un enseignant' })
@@ -75,8 +86,11 @@ export class EnseignantsController {
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'Enseignant introuvable' })
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(
+    @Param('id') id: string,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.remove(request.user.tenantId, id);
   }
   @Post(':id/affectations')
   @ApiOperation({ summary: 'Affecter une matière à un enseignant' })
@@ -84,15 +98,22 @@ export class EnseignantsController {
   @ApiBadRequestResponse({ description: 'Données invalides' })
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
-  createAffectation(@Param('id') id: string, @Body() dto: AffectationDto) {
-    return this.service.createAffectation(id, dto);
+  createAffectation(
+    @Param('id') id: string,
+    @Body() dto: AffectationDto,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.createAffectation(request.user.tenantId, id, dto);
   }
   @Get(':id/affectations')
   @ApiOperation({ summary: 'Lister les affectations d’un enseignant' })
   @ApiOkResponse({ description: 'Liste des affectations' })
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
-  findAffectations(@Param('id') id: string) {
-    return this.service.findAffectations(id);
+  findAffectations(
+    @Param('id') id: string,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.findAffectations(request.user.tenantId, id);
   }
 }
