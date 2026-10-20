@@ -21,6 +21,9 @@ export const uniqueSuffix = () =>
 export async function createE2eApp() {
   const originalDatabaseUrl = process.env.DATABASE_URL;
   process.env.DATABASE_URL = testDatabaseUrl;
+  // Les suites déposent beaucoup de candidatures : limite de débit relevée,
+  // sauf si une suite (rate-limit) fixe elle-même une valeur basse
+  process.env.THROTTLE_PUBLIC_LIMIT ??= '10000';
   const moduleFixture = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
