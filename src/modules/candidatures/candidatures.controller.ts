@@ -96,8 +96,11 @@ export class CandidaturesController {
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'Candidature introuvable' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.findOne(id, request.user.tenantId);
   }
 
   @Patch(':id/statut')
@@ -139,7 +142,10 @@ export class CandidaturesController {
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'Candidature introuvable' })
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(
+    @Param('id') id: string,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.remove(id, request.user.tenantId);
   }
 }

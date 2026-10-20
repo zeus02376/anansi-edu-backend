@@ -115,9 +115,9 @@ export class CandidaturesService {
     });
   }
 
-  findOne(id: string) {
-    return this.prisma.candidature.findUniqueOrThrow({
-      where: { id },
+  findOne(id: string, tenantId: string) {
+    return this.prisma.candidature.findFirstOrThrow({
+      where: { id, tenantId },
       include: { documents: true, historiques: true },
     });
   }
@@ -218,7 +218,14 @@ export class CandidaturesService {
     });
   }
 
-  remove(id: string) {
+  async remove(id: string, tenantId: string) {
+    const candidature = await this.prisma.candidature.findFirst({
+      where: { id, tenantId },
+      select: { id: true },
+    });
+    if (!candidature) {
+      throw new NotFoundException('Candidature introuvable');
+    }
     return this.prisma.candidature.delete({ where: { id } });
   }
 }

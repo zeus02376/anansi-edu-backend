@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Role } from '@prisma/client';
 import {
   ApiBadRequestResponse,
@@ -24,6 +32,11 @@ import { EtudiantsService } from './etudiants.service';
 @Roles(Role.ADMIN, Role.SCOLARITE)
 export class EtudiantsController {
   constructor(private readonly service: EtudiantsService) {}
+
+  private tenantId(request: { user: { tenantId: string } }) {
+    return request.user.tenantId;
+  }
+
   @Post()
   @ApiOperation({
     summary: 'Créer un étudiant depuis une candidature acceptée',
@@ -33,16 +46,19 @@ export class EtudiantsController {
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'Candidature introuvable' })
-  create(@Body() dto: CreateEtudiantDto) {
-    return this.service.create(dto);
+  create(
+    @Body() dto: CreateEtudiantDto,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.create(dto, this.tenantId(request));
   }
   @Get()
   @ApiOperation({ summary: 'Lister les étudiants' })
   @ApiOkResponse({ description: 'Liste des étudiants' })
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
-  findAll() {
-    return this.service.findAll();
+  findAll(@Req() request: { user: { tenantId: string } }) {
+    return this.service.findAll(this.tenantId(request));
   }
   @Get(':id')
   @ApiOperation({ summary: 'Consulter un étudiant' })
@@ -50,7 +66,10 @@ export class EtudiantsController {
   @ApiUnauthorizedResponse({ description: 'Authentification requise' })
   @ApiForbiddenResponse({ description: 'Rôle ADMIN ou SCOLARITE requis' })
   @ApiNotFoundResponse({ description: 'Étudiant introuvable' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.findOne(id, this.tenantId(request));
   }
 }
