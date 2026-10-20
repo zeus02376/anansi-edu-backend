@@ -6,25 +6,21 @@ import {
   Param,
   Post,
   Put,
-  UseGuards,
+  Req,
 } from '@nestjs/common';
-import { Role } from '@prisma/client';
 import {
-  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
-  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
-  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { AdminOnly } from '../../common/decorators/admin-only.decorator';
 import { TenantDto } from './dto/tenant.dto';
 import { TenantsService } from './tenants.service';
+
+type TenantRequest = { user: { tenantId: string } };
 
 @Controller('tenants')
 @ApiTags('tenants')
@@ -40,53 +36,63 @@ export class TenantsController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Lister les tenants' })
-  @ApiOkResponse({ description: 'Liste des tenants' })
-  @ApiUnauthorizedResponse({ description: 'Authentification requise' })
-  @ApiForbiddenResponse({ description: 'Rôle ADMIN requis' })
-  findAll() {
-    return this.service.findAll();
+  @AdminOnly()
+  @ApiOperation({
+    summary: 'Lister les tenants (uniquement celui du JWT)',
+    description:
+      'Déprécié : renvoie une liste contenant uniquement l’établissement du JWT. Utiliser GET /tenants/me.',
+    deprecated: true,
+  })
+  @ApiOkResponse({ description: 'Liste réduite à l’établissement du JWT' })
+  findAll(@Req() request: TenantRequest) {
+    return this.service
+      .findMine(request.user.tenantId)
+      .then((tenant) => [tenant]);
+  }
+
+  // Déclarée avant :id, sinon « me » serait lu comme un identifiant
+  @Get('me')
+  @AdminOnly()
+  @ApiOperation({ summary: 'Consulter l’établissement du JWT' })
+  @ApiOkResponse({ description: 'Établissement de l’utilisateur connecté' })
+  findMine(@Req() request: TenantRequest) {
+    return this.service.findMine(request.user.tenantId);
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Consulter un tenant' })
+  @AdminOnly()
+  @ApiOperation({ summary: 'Consulter son établissement par identifiant' })
   @ApiOkResponse({ description: 'Tenant trouvé' })
-  @ApiUnauthorizedResponse({ description: 'Authentification requise' })
-  @ApiForbiddenResponse({ description: 'Rôle ADMIN requis' })
-  @ApiNotFoundResponse({ description: 'Tenant introuvable' })
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  @ApiNotFoundResponse({
+    description: 'Tenant introuvable ou autre établissement',
+  })
+  findOne(@Param('id') id: string, @Req() request: TenantRequest) {
+    return this.service.findOne(request.user.tenantId, id);
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Modifier un tenant' })
+  @AdminOnly()
+  @ApiOperation({ summary: 'Modifier son établissement' })
   @ApiOkResponse({ description: 'Tenant modifié' })
-  @ApiUnauthorizedResponse({ description: 'Authentification requise' })
-  @ApiForbiddenResponse({ description: 'Rôle ADMIN requis' })
-  @ApiNotFoundResponse({ description: 'Tenant introuvable' })
-  update(@Param('id') id: string, @Body() dto: TenantDto) {
-    return this.service.update(id, dto);
+  @ApiNotFoundResponse({
+    description: 'Tenant introuvable ou autre établissement',
+  })
+  update(
+    @Param('id') id: string,
+    @Body() dto: TenantDto,
+    @Req() request: TenantRequest,
+  ) {
+    return this.service.update(request.user.tenantId, id, dto);
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Supprimer un tenant' })
+  @AdminOnly()
+  @ApiOperation({ summary: 'Supprimer son établissement' })
   @ApiOkResponse({ description: 'Tenant supprimé' })
-  @ApiUnauthorizedResponse({ description: 'Authentification requise' })
-  @ApiForbiddenResponse({ description: 'Rôle ADMIN requis' })
-  @ApiNotFoundResponse({ description: 'Tenant introuvable' })
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  @ApiNotFoundResponse({
+    description: 'Tenant introuvable ou autre établissement',
+  })
+  remove(@Param('id') id: string, @Req() request: TenantRequest) {
+    return this.service.remove(request.user.tenantId, id);
   }
 }

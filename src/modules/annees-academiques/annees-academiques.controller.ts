@@ -17,6 +17,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { AdminOnly } from '../../common/decorators/admin-only.decorator';
 import { StaffOnly } from '../../common/decorators/staff-only.decorator';
 import { CatalogueQueryDto } from '../../common/dto/catalogue-query.dto';
 import { PublicTenantService } from '../../common/tenant/public-tenant.service';
@@ -94,7 +95,7 @@ export class AnneesAcademiquesController {
   }
 
   @Delete(':id')
-  @StaffOnly()
+  @AdminOnly()
   @ApiOperation({ summary: 'Supprimer une année académique' })
   @ApiOkResponse({ description: 'Année académique supprimée' })
   @ApiNotFoundResponse({ description: 'Année académique introuvable' })
