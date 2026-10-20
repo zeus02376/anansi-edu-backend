@@ -187,6 +187,7 @@ model Matiere {
   niveau          Niveau          @relation(fields: [niveauId], references: [id])
   anneeAcademique AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
   affectations    Affectation[]
+  evaluations     Evaluation[]
 }
 
 model Enseignant {
@@ -252,6 +253,7 @@ model Inscription {
   etudiant        Etudiant        @relation(fields: [etudiantId], references: [id])
   niveau          Niveau          @relation(fields: [niveauId], references: [id])
   anneeAcademique AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
+  notes           Note[]
 
   @@unique([etudiantId, anneeAcademiqueId])
 }
@@ -357,4 +359,81 @@ model NotificationCandidatureEmail {
 
   @@index([candidatureId, createdAt])
   @@index([statut, createdAt])
+}
+
+enum TypeEvaluation {
+  DEVOIR
+  TP
+  PROJET
+  EXAMEN
+  AUTRE
+}
+
+enum StatutEvaluation {
+  BROUILLON
+  PUBLIEE
+}
+
+enum EtatNote {
+  NOTEE
+  ABSENT
+  DISPENSE
+}
+
+// Épreuve nommée d'une matière ; creePar / publiePar : identifiants d'utilisateur
+model Evaluation {
+  id          String           @id @default(uuid())
+  matiereId   String
+  nom         String
+  type        TypeEvaluation
+  coefficient Decimal          @default(1) @db.Decimal(5, 2)
+  bareme      Decimal          @default(20) @db.Decimal(5, 2)
+  date        DateTime?
+  statut      StatutEvaluation @default(BROUILLON)
+  publieLe    DateTime?
+  publiePar   String?
+  creePar     String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  matiere Matiere @relation(fields: [matiereId], references: [id])
+  notes   Note[]
+
+  @@unique([matiereId, nom])
+}
+
+// Note d'un inscrit à une évaluation ; updatedAt sert au contrôle de concurrence
+model Note {
+  id            String   @id @default(uuid())
+  evaluationId  String
+  inscriptionId String
+  valeur        Decimal? @db.Decimal(6, 2)
+  etat          EtatNote @default(NOTEE)
+  commentaire   String?
+  saisiePar     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  evaluation  Evaluation       @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  inscription Inscription      @relation(fields: [inscriptionId], references: [id])
+  historiques NoteHistorique[]
+
+  @@unique([evaluationId, inscriptionId])
+}
+
+// Journal des corrections d'une note (motif obligatoire), calqué sur HistoriqueCandidature
+model NoteHistorique {
+  id             String   @id @default(uuid())
+  noteId         String
+  ancienneValeur Decimal? @db.Decimal(6, 2)
+  nouvelleValeur Decimal? @db.Decimal(6, 2)
+  ancienEtat     EtatNote
+  nouvelEtat     EtatNote
+  motif          String
+  modifiePar     String
+  date           DateTime @default(now())
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId, date])
 }
