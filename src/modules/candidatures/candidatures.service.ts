@@ -124,12 +124,15 @@ export class CandidaturesService {
 
   /**
    * Suivi public par numéro de dossier exact : sous-ensemble sûr uniquement
-   * (ni e-mail, ni téléphone, ni documents, ni historique).
+   * (ni e-mail, ni téléphone, ni documents, ni historique). L'identifiant
+   * (UUID non devinable) permet au candidat de déposer ses documents : l'upload
+   * exige toujours le numéro de dossier ET l'e-mail.
    */
   async suivi(numeroDossier: string) {
     const candidature = await this.prisma.candidature.findUnique({
       where: { numeroDossier },
       select: {
+        id: true,
         numeroDossier: true,
         statut: true,
         nom: true,

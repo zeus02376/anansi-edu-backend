@@ -25,6 +25,7 @@ export async function createE2eApp() {
   // sauf si une suite (rate-limit) fixe elle-même une valeur basse
   process.env.THROTTLE_PUBLIC_LIMIT ??= '10000';
   process.env.THROTTLE_SUIVI_LIMIT ??= '10000';
+  process.env.THROTTLE_UPLOAD_LIMIT ??= '10000';
   const moduleFixture = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();

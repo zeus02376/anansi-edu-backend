@@ -20,6 +20,14 @@ export class AnneesAcademiquesService {
       orderBy: { dateDebut: 'desc' },
     });
   }
+  /** Années ouvertes aux candidatures : champs publics uniquement. */
+  findOuvertes(tenantId: string) {
+    return this.prisma.anneeAcademique.findMany({
+      where: { tenantId, active: true },
+      select: { id: true, libelle: true, dateDebut: true, dateFin: true },
+      orderBy: { dateDebut: 'desc' },
+    });
+  }
   findOne(id: string) {
     return this.prisma.anneeAcademique.findUniqueOrThrow({ where: { id } });
   }
