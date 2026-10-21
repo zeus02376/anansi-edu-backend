@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { TenantScopeService } from '../../common/tenant/tenant-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -46,9 +50,61 @@ export class InscriptionsService {
     await this.scope.inscription(tenantId, id);
     await this.assertReferences(tenantId, data);
     await this.assertUneInscriptionParAnnee(data, id);
-    return this.unique(() =>
-      this.prisma.inscription.update({ where: { id }, data }),
-    );
+    return this.unique(() => this.mettreAJour(id, data));
+  }
+
+  /**
+   * Une inscription qui porte des notes ne change plus d'étudiant, de niveau,
+   * d'année ni de statut : les notes, les moyennes et la présence dans les
+   * grilles en dépendent. Seuls les frais restent modifiables. Contrôle et
+   * écriture dans une même transaction sérialisable : une note saisie en même
+   * temps ne peut pas passer entre les deux.
+   */
+  private async mettreAJour(id: string, data: InscriptionDto) {
+    try {
+      return await this.prisma.$transaction(
+        async (tx) => {
+          const actuelle = await tx.inscription.findUniqueOrThrow({
+            where: { id },
+            select: {
+              etudiantId: true,
+              niveauId: true,
+              anneeAcademiqueId: true,
+              statut: true,
+              _count: { select: { notes: true } },
+            },
+          });
+          const modifies = [
+            data.etudiantId !== actuelle.etudiantId && 'l’étudiant',
+            data.niveauId !== actuelle.niveauId && 'le niveau',
+            data.anneeAcademiqueId !== actuelle.anneeAcademiqueId &&
+              'l’année académique',
+            data.statut !== undefined &&
+              data.statut !== actuelle.statut &&
+              'le statut',
+          ].filter(Boolean);
+          if (actuelle._count.notes > 0 && modifies.length > 0) {
+            throw new ConflictException(
+              `Impossible de modifier ${modifies.join(', ')} : cette inscription porte déjà des notes. Traitez d’abord les notes de l’étudiant (seuls les frais d’inscription restent modifiables).`,
+            );
+          }
+          return tx.inscription.update({ where: { id }, data });
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2034') {
+          throw new ConflictException(
+            'Cette inscription est modifiée en même temps par une autre opération : réessayez',
+          );
+        }
+        if (error.code === 'P2025') {
+          throw new NotFoundException('Inscription introuvable');
+        }
+      }
+      throw error;
+    }
   }
 
   async remove(tenantId: string, id: string) {

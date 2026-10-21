@@ -155,12 +155,44 @@ export class EtudiantsService {
     });
   }
 
+  /**
+   * Dossier d'un étudiant pour le personnel. Champs explicitement listés (comme
+   * les routes « moi ») : un futur champ du modèle n'est jamais exposé par
+   * défaut, et rien d'interne (tenantId, userId, createdBy) ne sort.
+   */
   findOne(id: string, tenantId: string) {
     return this.prisma.etudiant.findFirstOrThrow({
       where: { id, tenantId },
-      include: {
+      select: {
+        id: true,
+        matricule: true,
+        matriculeIuc: true,
+        dateNaissance: true,
+        lieuNaissance: true,
+        nationalite: true,
+        photoUrl: true,
+        candidatureId: true,
         user: { select: { id: true, nom: true, prenom: true, email: true } },
-        inscriptions: true,
+        inscriptions: {
+          select: {
+            id: true,
+            statut: true,
+            dateInscription: true,
+            fraisPayes: true,
+            niveau: {
+              select: { id: true, nom: true, code: true, ordre: true },
+            },
+            anneeAcademique: {
+              select: {
+                id: true,
+                libelle: true,
+                dateDebut: true,
+                dateFin: true,
+              },
+            },
+          },
+          orderBy: { dateInscription: 'desc' },
+        },
       },
     });
   }
