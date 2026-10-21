@@ -22,6 +22,7 @@ export class EtudiantMoiService {
       select: {
         id: true,
         matricule: true,
+        matriculeIuc: true,
         dateNaissance: true,
         lieuNaissance: true,
         nationalite: true,

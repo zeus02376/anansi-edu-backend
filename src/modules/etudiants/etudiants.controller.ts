@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -23,6 +24,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CreateEtudiantDto } from './dto/create-etudiant.dto';
+import { UpdateEtudiantDto } from './dto/update-etudiant.dto';
 import { EtudiantsService } from './etudiants.service';
 
 @Controller('etudiants')
@@ -71,5 +73,19 @@ export class EtudiantsController {
     @Req() request: { user: { tenantId: string } },
   ) {
     return this.service.findOne(id, this.tenantId(request));
+  }
+  @Patch(':id')
+  @ApiOperation({
+    summary: 'Modifier un étudiant (matricule IUC : import, jamais généré)',
+  })
+  @ApiOkResponse({ description: 'Étudiant modifié' })
+  @ApiBadRequestResponse({ description: 'Format de matricule invalide' })
+  @ApiNotFoundResponse({ description: 'Étudiant introuvable' })
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateEtudiantDto,
+    @Req() request: { user: { tenantId: string } },
+  ) {
+    return this.service.update(id, this.tenantId(request), dto);
   }
 }

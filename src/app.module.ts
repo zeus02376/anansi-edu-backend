@@ -15,6 +15,7 @@ import { FilieresModule } from './modules/filieres/filieres.module';
 import { InscriptionsModule } from './modules/inscriptions/inscriptions.module';
 import { MatieresModule } from './modules/matieres/matieres.module';
 import { NiveauxModule } from './modules/niveaux/niveaux.module';
+import { NotesModule } from './modules/notes/notes.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 
@@ -36,6 +37,7 @@ import { TenantsModule } from './modules/tenants/tenants.module';
     EtudiantsModule,
     CandidaturesModule,
     InscriptionsModule,
+    NotesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

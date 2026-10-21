@@ -8,14 +8,65 @@ import { Prisma, StatutCandidature, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { formatMatricule } from '../../common/utils/matricule.util';
 import { generateTemporaryPassword } from '../../common/utils/password.util';
+import { TenantScopeService } from '../../common/tenant/tenant-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEtudiantDto } from './dto/create-etudiant.dto';
+import { UpdateEtudiantDto } from './dto/update-etudiant.dto';
 
 @Injectable()
 export class EtudiantsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scope: TenantScopeService,
+  ) {}
+
+  private matriculeIucPris() {
+    return new ConflictException(
+      'Ce matricule IUC est déjà attribué à un autre étudiant',
+    );
+  }
+
+  /** Refuse un matricule IUC déjà attribué à un autre étudiant. */
+  private async assertMatriculeIucLibre(
+    matriculeIuc: string | null | undefined,
+    exceptId?: string,
+  ) {
+    if (!matriculeIuc) return;
+    const pris = await this.prisma.etudiant.findFirst({
+      where: { matriculeIuc, ...(exceptId && { id: { not: exceptId } }) },
+      select: { id: true },
+    });
+    if (pris) throw this.matriculeIucPris();
+  }
+
+  /** Modification par le personnel (matricule IUC) : 404 hors de l'établissement. */
+  async update(id: string, tenantId: string, data: UpdateEtudiantDto) {
+    await this.scope.etudiant(tenantId, id);
+    if (data.matriculeIuc === undefined) {
+      throw new BadRequestException('Aucune modification fournie');
+    }
+    await this.assertMatriculeIucLibre(data.matriculeIuc, id);
+    try {
+      return await this.prisma.etudiant.update({
+        where: { id },
+        data: { matriculeIuc: data.matriculeIuc },
+        include: {
+          user: { select: { id: true, nom: true, prenom: true, email: true } },
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw this.matriculeIucPris();
+      }
+      throw error;
+    }
+  }
 
   async create(data: CreateEtudiantDto, tenantId: string) {
+    await this.assertMatriculeIucLibre(data.matriculeIuc);
     // Renvoyé une seule fois à l'appelant ; seul le hash est stocké
     const motDePasseTemporaire = generateTemporaryPassword();
     const passwordHash = await bcrypt.hash(motDePasseTemporaire, 12);
@@ -62,6 +113,7 @@ export class EtudiantsService {
             lieuNaissance: candidature.lieuNaissance,
             nationalite: candidature.nationalite,
             candidatureId: candidature.id,
+            matriculeIuc: data.matriculeIuc ?? null,
           },
           include: {
             user: {
@@ -82,6 +134,9 @@ export class EtudiantsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
+        if (String(error.meta?.target).includes('matriculeIuc')) {
+          throw this.matriculeIucPris();
+        }
         throw new ConflictException(
           'Cette adresse ou cette candidature est déjà associée à un compte',
         );

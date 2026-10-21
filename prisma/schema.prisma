@@ -233,6 +233,8 @@ model Etudiant {
   nationalite   String
   photoUrl      String?
   candidatureId String?  @unique
+  // Matricule institutionnel (import / affichage), jamais généré : IUC + AA + E + 7 chiffres
+  matriculeIuc  String?  @unique
 
   user         User          @relation(fields: [userId], references: [id])
   tenant       Tenant        @relation(fields: [tenantId], references: [id])
@@ -396,8 +398,9 @@ model Evaluation {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
-  matiere Matiere @relation(fields: [matiereId], references: [id])
-  notes   Note[]
+  matiere    Matiere                @relation(fields: [matiereId], references: [id])
+  notes      Note[]
+  historique EvaluationHistorique[]
 
   @@unique([matiereId, nom])
 }
@@ -436,4 +439,23 @@ model NoteHistorique {
   note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
 
   @@index([noteId, date])
+}
+
+enum ActionPublication {
+  PUBLICATION
+  DEPUBLICATION
+}
+
+// Journal des publications et dépublications d'une évaluation (motif obligatoire à la dépublication)
+model EvaluationHistorique {
+  id           String            @id @default(uuid())
+  evaluationId String
+  action       ActionPublication
+  motif        String?
+  userId       String
+  date         DateTime          @default(now())
+
+  evaluation Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+
+  @@index([evaluationId, date])
 }
