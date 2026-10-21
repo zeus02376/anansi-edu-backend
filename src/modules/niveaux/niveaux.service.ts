@@ -6,6 +6,11 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { NiveauDto } from './dto/niveau.dto';
 
+/** Filière du niveau (nom et code seulement) : de quoi distinguer deux « Licence 1 ». */
+const withFiliere = {
+  filiere: { select: { id: true, nom: true, code: true } },
+} as const;
+
 @Injectable()
 export class NiveauxService {
   constructor(
@@ -19,12 +24,14 @@ export class NiveauxService {
   findAll(tenantId: string) {
     return this.prisma.niveau.findMany({
       where: niveauInTenant(tenantId),
+      include: withFiliere,
       orderBy: { ordre: 'asc' },
     });
   }
   findOne(tenantId: string, id: string) {
     return this.prisma.niveau.findFirstOrThrow({
       where: { id, ...niveauInTenant(tenantId) },
+      include: withFiliere,
     });
   }
   async update(tenantId: string, id: string, data: NiveauDto) {
