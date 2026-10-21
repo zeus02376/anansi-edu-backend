@@ -22,6 +22,7 @@ import {
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import { StaffOnly } from '../../common/decorators/staff-only.decorator';
+import { PublicationDto } from './dto/publication.dto';
 import {
   AnnulerSeanceDto,
   CreerSeanceDto,
@@ -155,5 +156,31 @@ export class PlanningController {
   @ApiOkResponse({ description: '{ du, au, nombre, conflits[] }' })
   conflits(@Query() query: FenetreQueryDto, @Req() request: PersonnelRequest) {
     return this.service.auditer(request.user.tenantId, query);
+  }
+
+  @Post('publier')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Publier les séances d’un niveau sur une période : elles deviennent visibles des enseignants et étudiants concernés',
+    description:
+      'Granularité : niveau + intervalle de dates (une semaine ou plus, 366 jours max), rythme facultatif. ' +
+      'Une séance commune à plusieurs niveaux est publiée pour tous. Les séances annulées jamais publiées sont ignorées. ' +
+      'Une séance créée après la publication reste en brouillon jusqu’à la prochaine.',
+  })
+  @ApiOkResponse({ description: '{ action, nombre, dejaDansCetEtat, … }' })
+  publier(@Body() dto: PublicationDto, @Req() request: PersonnelRequest) {
+    return this.service.publier(request.user.tenantId, dto);
+  }
+
+  @Post('depublier')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Dépublier les séances d’un niveau sur une période : elles redeviennent des brouillons invisibles',
+  })
+  @ApiOkResponse({ description: '{ action, nombre, dejaDansCetEtat, … }' })
+  depublier(@Body() dto: PublicationDto, @Req() request: PersonnelRequest) {
+    return this.service.depublier(request.user.tenantId, dto);
   }
 }

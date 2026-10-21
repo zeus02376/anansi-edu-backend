@@ -42,6 +42,7 @@ export class EtudiantMoiService {
         statut: true,
         dateInscription: true,
         fraisPayes: true,
+        rythme: true,
         niveau: { select: { id: true, nom: true, code: true, ordre: true } },
         anneeAcademique: {
           select: { id: true, libelle: true, dateDebut: true, dateFin: true },
