@@ -167,6 +167,7 @@ describeWithTestDatabase(
             'fraisPayes',
             'id',
             'niveau',
+            'rythme',
             'statut',
           ].sort(),
         );

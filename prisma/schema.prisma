@@ -253,6 +253,8 @@ model Inscription {
   statut            StatutInscription @default(EN_ATTENTE)
   dateInscription   DateTime          @default(now())
   fraisPayes        Boolean           @default(false)
+  // Jour ou Soir : détermine l'emploi du temps suivi (les séances portent le même rythme)
+  rythme            Rythme            @default(JOUR)
   createdBy         String
 
   etudiant        Etudiant        @relation(fields: [etudiantId], references: [id])

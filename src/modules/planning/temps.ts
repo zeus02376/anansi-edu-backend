@@ -53,3 +53,29 @@ export function lireFenetre(du: string, au: string) {
 /** « 480 » → « 08:00 » (affichage dans les messages). */
 export const formaterHeure = (minutes: number) =>
   `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+
+/**
+ * Semaine ISO 8601 (« 2027-W05 ») → son lundi et son dimanche. La semaine 1 est celle qui
+ * contient le 4 janvier ; une semaine 53 n'existe que les années qui en comptent une.
+ */
+export function lireSemaine(texte: string) {
+  const trouve = /^(\d{4})-W(\d{2})$/.exec(texte);
+  if (!trouve) {
+    throw new BadRequestException(
+      'semaine : format AAAA-Wss attendu (ex. 2027-W05)',
+    );
+  }
+  const annee = Number(trouve[1]);
+  const semaine = Number(trouve[2]);
+  const quatreJanvier = new Date(Date.UTC(annee, 0, 4));
+  const lundiSemaine1 = ajouterJours(
+    quatreJanvier,
+    1 - jourSemaine(quatreJanvier),
+  );
+  const lundi = ajouterJours(lundiSemaine1, 7 * (semaine - 1));
+  // L'année ISO d'une semaine est celle de son jeudi
+  if (semaine < 1 || ajouterJours(lundi, 3).getUTCFullYear() !== annee) {
+    throw new BadRequestException(`semaine : la semaine ${texte} n'existe pas`);
+  }
+  return { lundi, dimanche: ajouterJours(lundi, 6) };
+}

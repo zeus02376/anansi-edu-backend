@@ -1,5 +1,5 @@
 import { IsBoolean, IsEnum, IsOptional, IsUUID } from 'class-validator';
-import { StatutInscription } from '@prisma/client';
+import { Rythme, StatutInscription } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class InscriptionDto {
@@ -20,4 +20,12 @@ export class InscriptionDto {
   @IsOptional()
   @IsBoolean()
   fraisPayes?: boolean;
+  @ApiPropertyOptional({
+    enum: Rythme,
+    default: Rythme.JOUR,
+    description: 'Jour ou Soir : emploi du temps suivi par l’étudiant',
+  })
+  @IsOptional()
+  @IsEnum(Rythme)
+  rythme?: Rythme;
 }

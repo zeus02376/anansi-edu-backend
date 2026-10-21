@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Rythme, TypeSeance } from '@prisma/client';
+import { Prisma, Rythme, StatutSeance, TypeSeance } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import {
   matiereInTenant,
@@ -12,6 +12,7 @@ import {
 } from '../../common/tenant/tenant-scope.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreneauSeance, TypeConflit, typesDeConflit } from './conflits';
+import { PublicationDto } from './dto/publication.dto';
 import {
   AnnulerSeanceDto,
   CreerSeanceDto,
@@ -202,6 +203,31 @@ export class SeancesService {
     const nouvelleDate =
       dto.date === undefined ? null : dateObligatoire(dto.date, 'date');
 
+    // Un enseignant ou des matières qui changent : l'affectation est exigée sur le résultat
+    if (dto.enseignantId || dto.matiereIds) {
+      const verifiees = new Set<string>();
+      for (const cible of cibles) {
+        const enseignantId =
+          dto.enseignantId === undefined
+            ? cible.enseignantId
+            : dto.enseignantId;
+        const matieres = nouvelles
+          ? { ids: dto.matiereIds!, anneeId: nouvelles.anneeId }
+          : {
+              ids: cible.matieres.map(({ matiere }) => matiere.id),
+              anneeId: cible.matieres[0].matiere.anneeAcademiqueId,
+            };
+        const cle = `${enseignantId}|${matieres.anneeId}|${matieres.ids.join(',')}`;
+        if (!enseignantId || verifiees.has(cle)) continue;
+        verifiees.add(cle);
+        await this.verifierAffectation(
+          enseignantId,
+          matieres.ids,
+          matieres.anneeId,
+        );
+      }
+    }
+
     const valeurs = cibles.map((cible) => {
       const heureDebut = dto.heureDebut ?? cible.heureDebut;
       const heureFin = dto.heureFin ?? cible.heureFin;
@@ -366,6 +392,13 @@ export class SeancesService {
     this.verifierHeures(dto.heureDebut, dto.heureFin);
     const references = await this.verifierReferences(tenantId, dto);
     const niveauIds = references!.niveauIds;
+    if (dto.enseignantId) {
+      await this.verifierAffectation(
+        dto.enseignantId,
+        dto.matiereIds,
+        references!.anneeId,
+      );
+    }
     const candidats: Candidat[] = dates.map((date) => ({
       date: formaterDate(date),
       heureDebut: dto.heureDebut,
@@ -512,6 +545,7 @@ export class SeancesService {
    */
   private async verifierReferences(tenantId: string, ref: Reference) {
     let niveauIds: string[] | null = null;
+    let anneeId = '';
     if (ref.matiereIds) {
       const matieres = await this.prisma.matiere.findMany({
         where: { id: { in: ref.matiereIds }, ...matiereInTenant(tenantId) },
@@ -526,12 +560,87 @@ export class SeancesService {
         );
       }
       niveauIds = distincts(matieres.map((m) => m.niveauId));
+      anneeId = matieres[0].anneeAcademiqueId;
     }
     if (ref.enseignantId) {
       await this.scope.enseignant(tenantId, ref.enseignantId);
     }
     if (ref.salleId) await this.scope.salle(tenantId, ref.salleId);
-    return niveauIds ? { niveauIds } : null;
+    return niveauIds ? { niveauIds, anneeId } : null;
+  }
+
+  /**
+   * L'enseignant d'une séance doit être affecté à au moins une de ses matières pour la
+   * même année académique. 409 : la demande est valide, c'est l'état des affectations
+   * qui l'empêche (comme les conflits d'horaire).
+   */
+  private async verifierAffectation(
+    enseignantId: string,
+    matiereIds: string[],
+    anneeId: string,
+  ) {
+    const affectations = await this.prisma.affectation.count({
+      where: {
+        enseignantId,
+        matiereId: { in: matiereIds },
+        anneeAcademiqueId: anneeId,
+      },
+    });
+    if (affectations === 0) {
+      throw new ConflictException(
+        corps(
+          'Cet enseignant n’est affecté à aucune des matières de la séance pour cette année académique : affectez-le d’abord (POST /enseignants/:id/affectations)',
+        ),
+      );
+    }
+  }
+
+  // ---- publication ----
+
+  publier(tenantId: string, dto: PublicationDto) {
+    return this.changerStatut(tenantId, dto, StatutSeance.PUBLIEE);
+  }
+
+  depublier(tenantId: string, dto: PublicationDto) {
+    return this.changerStatut(tenantId, dto, StatutSeance.BROUILLON);
+  }
+
+  /**
+   * Publie ou dépublie les séances d'un niveau sur une période (et un rythme). Une séance
+   * commune à plusieurs niveaux change d'état pour tous. Publier ignore les séances
+   * annulées jamais publiées ; dépublier retire aussi les annulées.
+   */
+  private async changerStatut(
+    tenantId: string,
+    dto: PublicationDto,
+    statut: StatutSeance,
+  ) {
+    await this.scope.niveau(tenantId, dto.niveauId);
+    const { debut, fin } = lireFenetre(dto.du, dto.au);
+    const concernees: Prisma.SeanceWhereInput = {
+      date: { gte: debut, lte: fin },
+      ...(dto.rythme && { rythme: dto.rythme }),
+      ...(statut === StatutSeance.PUBLIEE && { annuleLe: null }),
+      matieres: {
+        some: {
+          matiere: { niveauId: dto.niveauId, ...matiereInTenant(tenantId) },
+        },
+      },
+    };
+    const total = await this.prisma.seance.count({ where: concernees });
+    const { count } = await this.prisma.seance.updateMany({
+      where: { ...concernees, statut: { not: statut } },
+      data: { statut },
+    });
+    return {
+      action: statut === StatutSeance.PUBLIEE ? 'PUBLICATION' : 'DEPUBLICATION',
+      niveauId: dto.niveauId,
+      du: dto.du,
+      au: dto.au,
+      rythme: dto.rythme ?? null,
+      nombre: count,
+      dejaDansCetEtat: total - count,
+    };
   }
 
   private async serialisable<T>(

@@ -179,6 +179,7 @@ export class EtudiantsService {
             statut: true,
             dateInscription: true,
             fraisPayes: true,
+            rythme: true,
             niveau: {
               select: { id: true, nom: true, code: true, ordre: true },
             },

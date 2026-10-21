@@ -153,6 +153,24 @@ describeWithTestDatabase(
       matiereAnnee2 = await creerMatiere(fx, niveau1, annee2, 'M1A2');
       ens1 = await creerProf(fx, tenantA, [matiere1]);
       ens2 = await creerProf(fx, tenantA, [matiere2]);
+      // Les deux enseignants sont affectés à toutes les matières de l'établissement :
+      // l'exigence d'affectation est testée à part (planning-consultation)
+      for (const enseignant of [ens1, ens2]) {
+        await prisma.affectation.createMany({
+          data: [
+            [matiere1, annee1],
+            [matiere1bis, annee1],
+            [matiere2, annee1],
+            [matiere3, annee1],
+            [matiereAnnee2, annee2],
+          ].map(([matiereId, anneeAcademiqueId]) => ({
+            enseignantId: enseignant.enseignant,
+            matiereId,
+            anneeAcademiqueId,
+          })),
+          skipDuplicates: true,
+        });
+      }
       scolarite = await creerCompte(fx, tenantA, Role.SCOLARITE);
       adminA = await creerCompte(fx, tenantA, Role.ADMIN);
       etudiant = await creerCompte(fx, tenantA, Role.ETUDIANT);
