@@ -100,6 +100,17 @@ export async function cleanupTenant(prisma: PrismaService, tenantId: string) {
   await prisma.evaluation.deleteMany({
     where: { matiere: { niveau: { filiere: { ecole: { tenantId } } } } },
   });
+  // Planning : séances (leurs liens aux matières partent en cascade) puis salles
+  await prisma.seance.deleteMany({
+    where: {
+      matieres: {
+        some: {
+          matiere: { niveau: { filiere: { ecole: { tenantId } } } },
+        },
+      },
+    },
+  });
+  await prisma.salle.deleteMany({ where: { campus: { tenantId } } });
   await prisma.inscription.deleteMany({ where: { etudiant: { tenantId } } });
   await prisma.affectation.deleteMany({ where: { enseignant: { tenantId } } });
   await prisma.enseignant.deleteMany({ where: { tenantId } });
