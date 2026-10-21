@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { NotesEtudiantController } from './notes-etudiant.controller';
+import { NotesEtudiantService } from './notes-etudiant.service';
 import {
   EvaluationsPersonnelController,
   NotesPersonnelController,
@@ -12,7 +14,8 @@ import { ReleveService } from './releve.service';
     EvaluationsPersonnelController,
     NotesPersonnelController,
     ReleveController,
+    NotesEtudiantController,
   ],
-  providers: [NotesPersonnelService, ReleveService],
+  providers: [NotesPersonnelService, ReleveService, NotesEtudiantService],
 })
 export class NotesModule {}

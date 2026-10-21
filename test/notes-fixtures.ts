@@ -65,7 +65,12 @@ export async function creerMatiere(
   ).id;
 }
 
-export type Eleve = { inscription: string; etudiant: string; user: string };
+export type Eleve = {
+  inscription: string;
+  etudiant: string;
+  user: string;
+  email: string;
+};
 
 export async function creerEleve(
   { prisma, suffix }: Fixtures,
@@ -75,10 +80,11 @@ export async function creerEleve(
   statut: StatutInscription = StatutInscription.VALIDE,
 ): Promise<Eleve> {
   const n = suivant();
+  const email = `eleve${n}-${suffix}@example.test`;
   const user = await createUser(
     prisma,
     tenantId,
-    `eleve${n}-${suffix}@example.test`,
+    email,
     'Password123',
     Role.ETUDIANT,
   );
@@ -101,7 +107,12 @@ export async function creerEleve(
       createdBy: user.id,
     },
   });
-  return { inscription: inscription.id, etudiant: etudiant.id, user: user.id };
+  return {
+    inscription: inscription.id,
+    etudiant: etudiant.id,
+    user: user.id,
+    email,
+  };
 }
 
 export type Prof = { token: string; enseignant: string; user: string };
