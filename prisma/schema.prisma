@@ -93,6 +93,7 @@ model Campus {
   updatedAt     DateTime      @updatedAt
   tenant        Tenant        @relation(fields: [tenantId], references: [id])
   ecoles        Ecole[]
+  salles        Salle[]
 
   @@unique([tenantId, nom])
 }
@@ -188,6 +189,7 @@ model Matiere {
   anneeAcademique AnneeAcademique @relation(fields: [anneeAcademiqueId], references: [id])
   affectations    Affectation[]
   evaluations     Evaluation[]
+  seances         SeanceMatiere[]
 }
 
 model Enseignant {
@@ -201,6 +203,7 @@ model Enseignant {
   user         User          @relation(fields: [userId], references: [id])
   tenant       Tenant        @relation(fields: [tenantId], references: [id])
   affectations Affectation[]
+  seances      Seance[]
 }
 
 enum TypeEnseignant {
@@ -458,4 +461,86 @@ model EvaluationHistorique {
   evaluation Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
 
   @@index([evaluationId, date])
+}
+
+// ---- Emploi du temps ----
+
+enum TypeSeance {
+  CM
+  TD
+  TP
+  EXAMEN
+  RESIT
+}
+
+// Jour ou Soir : distinct de Regime (régime académique de la filière)
+enum Rythme {
+  JOUR
+  SOIR
+}
+
+enum StatutSeance {
+  BROUILLON
+  PUBLIEE
+}
+
+// Salle d'un campus (code unique par campus, ex. « BL100 »)
+model Salle {
+  id       String  @id @default(uuid())
+  campusId String
+  code     String
+  nom      String?
+  // Texte libre pour l'instant (amphi, labo info...) : la liste n'est pas figée
+  type     String?
+  capacite Int?
+
+  campus  Campus   @relation(fields: [campusId], references: [id])
+  seances Seance[]
+
+  @@unique([campusId, code])
+}
+
+// Séance datée (une ligne par occurrence). Le jour de la semaine se déduit de la date.
+// Les heures sont des minutes depuis minuit (480 = 08:00), fin exclue.
+model Seance {
+  id              String       @id @default(uuid())
+  date            DateTime     @db.Date
+  heureDebut      Int
+  heureFin        Int
+  type            TypeSeance
+  enseignantId    String?
+  salleId         String?
+  rythme          Rythme       @default(JOUR)
+  statut          StatutSeance @default(BROUILLON)
+  annuleLe        DateTime?
+  motifAnnulation String?
+  // Occurrences issues d'une même création en lot
+  serieId         String?
+  creePar         String
+  // Identifiant dans un système source (futur import b2i), jamais utilisé par l'application
+  sourceExterneId String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  enseignant Enseignant?     @relation(fields: [enseignantId], references: [id], onDelete: Restrict)
+  salle      Salle?          @relation(fields: [salleId], references: [id], onDelete: Restrict)
+  matieres   SeanceMatiere[]
+
+  @@index([date])
+  @@index([enseignantId, date])
+  @@index([salleId, date])
+  @@index([serieId])
+}
+
+// Matières d'une séance (N-N) : le niveau et l'année en découlent. Un cours commun
+// à plusieurs filières est une seule séance liée à plusieurs matières.
+model SeanceMatiere {
+  seanceId  String
+  matiereId String
+
+  seance  Seance  @relation(fields: [seanceId], references: [id], onDelete: Cascade)
+  matiere Matiere @relation(fields: [matiereId], references: [id])
+
+  @@id([seanceId, matiereId])
+  @@index([matiereId])
 }

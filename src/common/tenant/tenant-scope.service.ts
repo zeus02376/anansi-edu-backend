@@ -113,6 +113,28 @@ export class TenantScopeService {
     }
   }
 
+  salle(tenantId: string, id: string) {
+    return this.prisma.salle
+      .findFirst({
+        where: { id, campus: { tenantId } },
+        select: { id: true },
+      })
+      .then((found) => this.assert(found, 'Salle'));
+  }
+
+  /** Une séance appartient à l'établissement de ses matières. */
+  seance(tenantId: string, id: string) {
+    return this.prisma.seance
+      .findFirst({
+        where: {
+          id,
+          matieres: { some: { matiere: matiereInTenant(tenantId) } },
+        },
+        select: { id: true },
+      })
+      .then((found) => this.assert(found, 'Séance'));
+  }
+
   inscription(tenantId: string, id: string) {
     return this.prisma.inscription
       .findFirst({
