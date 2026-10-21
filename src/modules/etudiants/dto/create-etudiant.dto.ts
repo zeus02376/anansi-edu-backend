@@ -1,5 +1,6 @@
 import { IsOptional, IsUUID } from 'class-validator';
 import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
+import { MatriculeIucField } from './matricule-iuc';
 
 export class CreateEtudiantDto {
   @ApiProperty({ format: 'uuid' })
@@ -14,4 +15,6 @@ export class CreateEtudiantDto {
   @IsOptional()
   @IsUUID()
   tenantId?: string;
+  @MatriculeIucField()
+  matriculeIuc?: string;
 }

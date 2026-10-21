@@ -93,6 +93,15 @@ export class TenantScopeService {
       .then((found) => this.assert(found, 'Évaluation'));
   }
 
+  note(tenantId: string, id: string) {
+    return this.prisma.note
+      .findFirst({
+        where: { id, evaluation: { matiere: matiereInTenant(tenantId) } },
+        select: { id: true },
+      })
+      .then((found) => this.assert(found, 'Note'));
+  }
+
   /** Toutes les inscriptions doivent appartenir à l'établissement, sinon 404. */
   async inscriptions(tenantId: string, ids: string[]) {
     const found = await this.prisma.inscription.findMany({

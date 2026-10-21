@@ -11,6 +11,8 @@ import {
   StatutInscription,
 } from '@prisma/client';
 import { TenantScopeService } from '../../common/tenant/tenant-scope.service';
+import { publierEvaluation } from '../notes/evaluation-publication';
+import { erreurValeur } from '../notes/valeur-note';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateEvaluationDto,
@@ -428,23 +430,12 @@ export class EnseignantEvaluationsService {
         'Inscription non notable : seuls les inscrits validés de cette matière peuvent être notés',
       );
     }
-    const etat = ligne.etat ?? EtatNote.NOTEE;
-    const valeur = ligne.valeur ?? null;
-    if (etat === EtatNote.NOTEE) {
-      if (valeur === null) {
-        erreur('VALEUR_INVALIDE', 'Une note est obligatoire pour l’état NOTEE');
-      } else if (valeur > bareme) {
-        erreur(
-          'VALEUR_INVALIDE',
-          `La note ne peut pas dépasser le barème (${bareme})`,
-        );
-      }
-    } else if (valeur !== null) {
-      erreur(
-        'VALEUR_INVALIDE',
-        `Aucune note ne peut être saisie pour l’état ${etat}`,
-      );
-    }
+    const message = erreurValeur(
+      ligne.etat ?? EtatNote.NOTEE,
+      ligne.valeur ?? null,
+      bareme,
+    );
+    if (message) erreur('VALEUR_INVALIDE', message);
 
     const existante = existantes.get(ligne.inscriptionId);
     if (existante) {
@@ -467,33 +458,7 @@ export class EnseignantEvaluationsService {
 
   async publier(enseignant: Enseignant, id: string) {
     await this.evaluationPropre(enseignant, id);
-    try {
-      await this.prisma.$transaction(
-        async (tx) => {
-          if (!(await tx.note.count({ where: { evaluationId: id } }))) {
-            throw new ConflictException('Aucune note saisie : rien à publier');
-          }
-          const { count } = await tx.evaluation.updateMany({
-            where: { id, statut: StatutEvaluation.BROUILLON },
-            data: {
-              statut: StatutEvaluation.PUBLIEE,
-              publieLe: new Date(),
-              publiePar: enseignant.userId,
-            },
-          });
-          if (!count) {
-            throw new ConflictException('Cette évaluation est déjà publiée');
-          }
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
-    } catch (error) {
-      // Une saisie simultanée : l'enseignant recharge puis republie
-      if (this.estViolation(error, 'P2034')) {
-        throw new ConflictException(CONFLIT_CONCURRENT);
-      }
-      throw error;
-    }
+    await publierEvaluation(this.prisma, id, enseignant.userId);
     return this.prisma.evaluation.findUniqueOrThrow({
       where: { id },
       select: EVALUATION,
