@@ -36,6 +36,26 @@ export class ReleveService {
         user: { select: { nom: true, prenom: true } },
       },
     });
+    const annees = await this.annees(tenantId, etudiantId, anneeId);
+
+    return {
+      etudiant: {
+        id: etudiant.id,
+        matricule: etudiant.matricule,
+        matriculeIuc: etudiant.matriculeIuc,
+        nom: etudiant.user.nom,
+        prenom: etudiant.user.prenom,
+      },
+      annees,
+    };
+  }
+
+  /**
+   * Années du relevé d'un étudiant, calculées à la volée. N'effectue AUCUN contrôle
+   * d'accès : l'appelant a déjà validé l'identité (JWT) ou l'établissement. Partagé
+   * par le relevé du personnel et par la consultation de l'étudiant (mêmes chiffres).
+   */
+  async annees(tenantId: string, etudiantId: string, anneeId?: string) {
     const inscriptions = await this.prisma.inscription.findMany({
       where: { etudiantId, ...(anneeId && { anneeAcademiqueId: anneeId }) },
       select: {
@@ -150,15 +170,6 @@ export class ReleveService {
       });
     }
 
-    return {
-      etudiant: {
-        id: etudiant.id,
-        matricule: etudiant.matricule,
-        matriculeIuc: etudiant.matriculeIuc,
-        nom: etudiant.user.nom,
-        prenom: etudiant.user.prenom,
-      },
-      annees,
-    };
+    return annees;
   }
 }
